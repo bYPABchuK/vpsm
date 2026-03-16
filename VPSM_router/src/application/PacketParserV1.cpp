@@ -55,16 +55,16 @@ namespace vpsm::server::application {
         }
 
         const std::uint32_t vNetworkId = readU32BE(data + ptr);
-        ptr += 4;
+        ptr += sizeof(vNetworkId);
 
         const std::uint32_t srcVip = readU32BE(data + ptr);
-        ptr += 4;
+        ptr += sizeof(srcVip);
 
         const std::uint32_t dstVip = readU32BE(data + ptr);
-        ptr += 4;
+        ptr += sizeof(dstVip);
 
         const std::uint64_t seq = readU64BE(data + ptr);
-        ptr += 8;
+        ptr += sizeof(seq);
 
         const std::uint32_t keyId = readU32BE(data + ptr);
 
