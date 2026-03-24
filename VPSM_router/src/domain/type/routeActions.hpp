@@ -10,5 +10,4 @@ namespace vpsm::server::domain {
     };
 
     using RouteAction = std::variant<Drop, Forward>;
-
 }
