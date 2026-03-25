@@ -14,6 +14,8 @@ include(GoogleTest)
 
 add_executable(unit_tests
     src/application/PacketParserV1.cpp
+    src/application/PacketParserV2.cpp
+    src/application/AuthServiceV2.cpp
     src/application/RoutingService.cpp
     src/application/UserService.cpp
     src/application/AtomicMetricCounter.cpp
@@ -25,6 +27,8 @@ add_executable(unit_tests
     test/application/AtomicMetricCounter_test.cpp
     test/application/MetricService_test.cpp
     test/application/PacketParser_test.cpp
+    test/application/PacketParserV2_test.cpp
+    test/application/AuthServiceV2_test.cpp
     test/application/RoutingService_test.cpp
     test/application/UserService_test.cpp
     test/application/VipAllocator_test.cpp

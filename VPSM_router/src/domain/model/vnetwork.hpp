@@ -11,8 +11,9 @@ namespace vpsm::server::domain {
         std::string name;
         std::string password_hash;
         std::vector<std::string> cipher_suites{
+            "none",
             "CHACHA20-POLY1305",
-            "AES-256-GCM"
+            "AES-256-GCM",
         };
         Peer owner;
     };

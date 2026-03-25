@@ -13,6 +13,17 @@ namespace {
     using vpsm::server::domain::Forward;
     using vpsm::server::domain::PacketIn;
 
+    class AuthServiceFake final : public vpsm::server::port::IAuthService {
+    public:
+        bool verify(const vpsm::server::domain::PacketHeader&, const vpsm::server::domain::PacketIn&) override {
+            ++verifyCalls;
+            return verifyResult;
+        }
+
+        bool verifyResult = true;
+        int verifyCalls = 0;
+    };
+
     class MembershipStoreFake final : public vpsm::server::port::IMembershipStore {
     public:
         std::optional<std::uint32_t> allocateVip(std::uint32_t, std::uint64_t) override { return std::nullopt; }
@@ -143,6 +154,52 @@ namespace {
         EXPECT_EQ(forward.packet.size, pkt.size);
         EXPECT_EQ(forward.packet.type, pkt.type);
         EXPECT_EQ(forward.packet.dest, 200u);
+    }
+
+    TEST(RoutingServiceTest, route_validPacketAndAuthFailed_Drop) {
+
+        MembershipStoreFake membership;
+        membership.resolvePeerByKey.emplace((10ull << 32) | 100u, 1u);
+        membership.resolvePeerByKey.emplace((10ull << 32) | 200u, 2u);
+        AuthServiceFake auth;
+        auth.verifyResult = false;
+        RoutingService service(membership, &auth);
+
+        auto raw = makeHeader(1, 0, 10, 100, 200, 10, 1);
+        PacketIn pkt{
+            .buf = std::make_shared<std::vector<std::uint8_t>>(raw),
+            .size = raw.size(),
+            .type = vpsm::server::domain::UDP,
+            .sourceIp = 0,
+        };
+
+        const auto action = service.route(pkt);
+
+        EXPECT_TRUE(std::holds_alternative<Drop>(action));
+        EXPECT_EQ(auth.verifyCalls, 1);
+    }
+
+    TEST(RoutingServiceTest, route_validPacketAndAuthPassed_Forward) {
+
+        MembershipStoreFake membership;
+        membership.resolvePeerByKey.emplace((10ull << 32) | 100u, 1u);
+        membership.resolvePeerByKey.emplace((10ull << 32) | 200u, 2u);
+        AuthServiceFake auth;
+        auth.verifyResult = true;
+        RoutingService service(membership, &auth);
+
+        auto raw = makeHeader(1, 0, 10, 100, 200, 11, 2);
+        PacketIn pkt{
+            .buf = std::make_shared<std::vector<std::uint8_t>>(raw),
+            .size = raw.size(),
+            .type = vpsm::server::domain::UDP,
+            .sourceIp = 0,
+        };
+
+        const auto action = service.route(pkt);
+
+        ASSERT_TRUE(std::holds_alternative<Forward>(action));
+        EXPECT_EQ(auth.verifyCalls, 1);
     }
 
 }
