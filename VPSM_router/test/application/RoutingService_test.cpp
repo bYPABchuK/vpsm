@@ -9,18 +9,21 @@
 
 namespace {
     using vpsm::server::application::RoutingService;
+    using vpsm::server::domain::AuthResultV2;
     using vpsm::server::domain::Drop;
     using vpsm::server::domain::Forward;
+    using vpsm::server::domain::InnerPacketHeaderV2;
+    using vpsm::server::domain::OutPacketHeaderV2;
     using vpsm::server::domain::PacketIn;
 
-    class AuthServiceFake final : public vpsm::server::port::IAuthService {
+    class AuthServiceV2Fake final : public vpsm::server::port::IAuthServiceV2 {
     public:
-        bool verify(const vpsm::server::domain::PacketHeader&, const vpsm::server::domain::PacketIn&) override {
+        std::optional<AuthResultV2> verifyAndDecrypt(const PacketIn&) override {
             ++verifyCalls;
             return verifyResult;
         }
 
-        bool verifyResult = true;
+        std::optional<AuthResultV2> verifyResult;
         int verifyCalls = 0;
     };
 
@@ -50,18 +53,28 @@ namespace {
         }
     };
 
-    std::vector<std::uint8_t> makeHeader(
+    std::vector<std::uint8_t> makePacketV2(
         std::uint8_t version,
         std::uint8_t type,
         std::uint32_t networkId,
         std::uint32_t srcVip,
         std::uint32_t dstVip,
         std::uint64_t seq,
-        std::uint32_t keyId
+        std::uint64_t sessionId
     ) {
         std::vector<std::uint8_t> data;
-        data.reserve(26);
+        data.reserve(30);
         data.push_back(version);
+
+        auto putU64 = [&data](std::uint64_t v) {
+            for (int i = 7; i >= 0; --i) {
+                data.push_back(static_cast<std::uint8_t>((v >> (i * 8)) & 0xFF));
+            }
+        };
+
+        putU64(sessionId);
+        putU64(seq);
+
         data.push_back(type);
 
         auto putU32 = [&data](std::uint32_t v) {
@@ -71,17 +84,9 @@ namespace {
             data.push_back(static_cast<std::uint8_t>(v & 0xFF));
         };
 
-        auto putU64 = [&data](std::uint64_t v) {
-            for (int i = 7; i >= 0; --i) {
-                data.push_back(static_cast<std::uint8_t>((v >> (i * 8)) & 0xFF));
-            }
-        };
-
         putU32(networkId);
         putU32(srcVip);
         putU32(dstVip);
-        putU64(seq);
-        putU32(keyId);
         return data;
     }
 
@@ -89,7 +94,7 @@ namespace {
 
         MembershipStoreFake membership;
         RoutingService service(membership);
-        PacketIn pkt{.buf = nullptr, .size = 26, .type = vpsm::server::domain::UDP, .sourceIp = 0};
+        PacketIn pkt{.buf = nullptr, .size = 30, .type = vpsm::server::domain::UDP, .sourceIp = 0};
 
         const auto action = service.route(pkt);
 
@@ -101,7 +106,7 @@ namespace {
         MembershipStoreFake membership;
         membership.resolvePeerByKey.emplace((10ull << 32) | 200u, 2u);
         RoutingService service(membership);
-        auto raw = makeHeader(1, 0, 10, 100, 200, 1, 1);
+        auto raw = makePacketV2(2, 0, 10, 100, 200, 1, 50);
         PacketIn pkt{
             .buf = std::make_shared<std::vector<std::uint8_t>>(raw),
             .size = raw.size(),
@@ -119,7 +124,7 @@ namespace {
         MembershipStoreFake membership;
         membership.resolvePeerByKey.emplace((10ull << 32) | 100u, 1u);
         RoutingService service(membership);
-        auto raw = makeHeader(1, 0, 10, 100, 200, 1, 1);
+        auto raw = makePacketV2(2, 0, 10, 100, 200, 1, 50);
         PacketIn pkt{
             .buf = std::make_shared<std::vector<std::uint8_t>>(raw),
             .size = raw.size(),
@@ -138,7 +143,7 @@ namespace {
         membership.resolvePeerByKey.emplace((10ull << 32) | 100u, 1u);
         membership.resolvePeerByKey.emplace((10ull << 32) | 200u, 2u);
         RoutingService service(membership);
-        auto raw = makeHeader(1, 0, 10, 100, 200, 777, 33);
+        auto raw = makePacketV2(2, 0, 10, 100, 200, 777, 50);
         PacketIn pkt{
             .buf = std::make_shared<std::vector<std::uint8_t>>(raw),
             .size = raw.size(),
@@ -161,11 +166,11 @@ namespace {
         MembershipStoreFake membership;
         membership.resolvePeerByKey.emplace((10ull << 32) | 100u, 1u);
         membership.resolvePeerByKey.emplace((10ull << 32) | 200u, 2u);
-        AuthServiceFake auth;
-        auth.verifyResult = false;
+        AuthServiceV2Fake auth;
+        auth.verifyResult = std::nullopt;
         RoutingService service(membership, &auth);
 
-        auto raw = makeHeader(1, 0, 10, 100, 200, 10, 1);
+        auto raw = makePacketV2(2, 0, 10, 100, 200, 10, 50);
         PacketIn pkt{
             .buf = std::make_shared<std::vector<std::uint8_t>>(raw),
             .size = raw.size(),
@@ -184,11 +189,14 @@ namespace {
         MembershipStoreFake membership;
         membership.resolvePeerByKey.emplace((10ull << 32) | 100u, 1u);
         membership.resolvePeerByKey.emplace((10ull << 32) | 200u, 2u);
-        AuthServiceFake auth;
-        auth.verifyResult = true;
+        AuthServiceV2Fake auth;
+        auth.verifyResult = AuthResultV2{
+            .outer = OutPacketHeaderV2{.packetVersion = 2, .sessionId = 50, .seq = 11},
+            .inner = InnerPacketHeaderV2{.packetType = vpsm::server::domain::PacketTypeV2::DATA, .vNetworkId = 10, .srcVip = 100, .dstVip = 200},
+        };
         RoutingService service(membership, &auth);
 
-        auto raw = makeHeader(1, 0, 10, 100, 200, 11, 2);
+        auto raw = makePacketV2(2, 0, 10, 100, 200, 11, 50);
         PacketIn pkt{
             .buf = std::make_shared<std::vector<std::uint8_t>>(raw),
             .size = raw.size(),

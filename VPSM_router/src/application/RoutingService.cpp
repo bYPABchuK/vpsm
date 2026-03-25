@@ -1,5 +1,5 @@
 #include "RoutingService.hpp"
-#include "PacketParser.hpp"
+#include "PacketParserV2.hpp"
 #include "../domain/model/packetOut.hpp"
 #include "../port/IRoutingStage.hpp"
 
@@ -10,8 +10,8 @@ namespace vpsm::server::application {
         class ParseRoutingStage final : public port::IRoutingStage {
         public:
             void execute(domain::RoutingContext& ctx) override {
-                ctx.header = PacketParser::parse(ctx.packet);
-                if (!ctx.header.has_value()) {
+                ctx.outerHeaderV2 = PacketParserV2::parseOuter(ctx.packet);
+                if (!ctx.outerHeaderV2.has_value()) {
                     ctx.action = domain::Drop{};
                     ctx.stop = true;
                 }
@@ -20,22 +20,45 @@ namespace vpsm::server::application {
 
         class AuthRoutingStage final : public port::IRoutingStage {
         public:
-            explicit AuthRoutingStage(port::IAuthService* authService)
+            explicit AuthRoutingStage(port::IAuthServiceV2* authService)
                 : authService_(authService) {}
 
             void execute(domain::RoutingContext& ctx) override {
-                if (authService_ == nullptr || !ctx.header.has_value()) {
+                if (!ctx.outerHeaderV2.has_value()) {
+                    ctx.action = domain::Drop{};
+                    ctx.stop = true;
                     return;
                 }
 
-                if (!authService_->verify(*ctx.header, ctx.packet)) {
+                if (authService_ == nullptr) {
+                    const auto inner = PacketParserV2::parseInner(
+                        ctx.packet.buf->data(),
+                        ctx.packet.size,
+                        domain::OUTER_HEADER_V2_SIZE
+                    );
+                    if (!inner.has_value()) {
+                        ctx.action = domain::Drop{};
+                        ctx.stop = true;
+                        return;
+                    }
+
+                    ctx.innerHeaderV2 = inner;
+                    return;
+                }
+
+                const auto authResult = authService_->verifyAndDecrypt(ctx.packet);
+                if (!authResult.has_value()) {
                     ctx.action = domain::Drop{};
                     ctx.stop = true;
+                    return;
                 }
+
+                ctx.outerHeaderV2 = authResult->outer;
+                ctx.innerHeaderV2 = authResult->inner;
             }
 
         private:
-            port::IAuthService* authService_;
+            port::IAuthServiceV2* authService_;
         };
 
         class MembershipRoutingStage final : public port::IRoutingStage {
@@ -44,14 +67,14 @@ namespace vpsm::server::application {
                 : memStore_(memStore) {}
 
             void execute(domain::RoutingContext& ctx) override {
-                if (!ctx.header.has_value()) {
+                if (!ctx.innerHeaderV2.has_value()) {
                     ctx.action = domain::Drop{};
                     ctx.stop = true;
                     return;
                 }
 
-                ctx.srcPeerId = memStore_.resolvePeer(ctx.header->vNetworkId, ctx.header->srcVip);
-                ctx.dstPeerId = memStore_.resolvePeer(ctx.header->vNetworkId, ctx.header->dstVip);
+                ctx.srcPeerId = memStore_.resolvePeer(ctx.innerHeaderV2->vNetworkId, ctx.innerHeaderV2->srcVip);
+                ctx.dstPeerId = memStore_.resolvePeer(ctx.innerHeaderV2->vNetworkId, ctx.innerHeaderV2->dstVip);
 
                 if (!ctx.srcPeerId.has_value() || !ctx.dstPeerId.has_value()) {
                     ctx.action = domain::Drop{};
@@ -66,7 +89,7 @@ namespace vpsm::server::application {
         class ForwardRoutingStage final : public port::IRoutingStage {
         public:
             void execute(domain::RoutingContext& ctx) override {
-                if (!ctx.header.has_value()) {
+                if (!ctx.innerHeaderV2.has_value()) {
                     ctx.action = domain::Drop{};
                     ctx.stop = true;
                     return;
@@ -76,7 +99,7 @@ namespace vpsm::server::application {
                     .buf = ctx.packet.buf,
                     .size = ctx.packet.size,
                     .type = ctx.packet.type,
-                    .dest = ctx.header->dstVip,
+                    .dest = ctx.innerHeaderV2->dstVip,
                 };
 
                 ctx.action = domain::Forward{packetOut};
@@ -105,7 +128,7 @@ namespace vpsm::server::application {
 
     RoutingService::RoutingService(
         port::IMembershipStore& memStore,
-        port::IAuthService* authService
+        port::IAuthServiceV2* authService
     )
         : memStore_(memStore),
           authService_(authService) {
