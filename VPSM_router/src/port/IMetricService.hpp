@@ -5,7 +5,7 @@ namespace vpsm::server::port {
     public:
         virtual ~IMetricService() = default;
 
-        virtual void start();
-        virtual void stop();
+        virtual void start() {}
+        virtual void stop() {}
     };
 }

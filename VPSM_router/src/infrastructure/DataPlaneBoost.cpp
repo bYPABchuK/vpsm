@@ -1,19 +1,21 @@
-#include "../port/IDataPlane.hpp"
-#include "../application/RoutingService.hpp"
+#include "DataPlaneBoost.hpp"
+
 #include "../adapter/GatewayManager.hpp"
 #include "../adapter/MembershipStore.hpp"
-#include "../adapter/boost/UdpGatewayBoost.hpp"
 #include "../adapter/boost/TcpManagerBoost.hpp"
+#include "../adapter/boost/UdpGatewayBoost.hpp"
+#include "../application/RoutingService.hpp"
+
 #include <boost/asio/executor_work_guard.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/thread_pool.hpp>
-#include <cstdint>
+
 #include <thread>
 
 namespace vpsm::server::infrastructure {
-    class DataPlaneBoost : public port::IDataPlane {
+    class DataPlaneBoost::Impl {
     public:
-        DataPlaneBoost(std::uint16_t udpPort, std::uint16_t workerNum)
+        Impl(std::uint16_t udpPort, std::uint16_t workerNum)
             : io_{},
               workGuard_{boost::asio::make_work_guard(io_)},
               workers_{workerNum},
@@ -21,32 +23,21 @@ namespace vpsm::server::infrastructure {
               routingService_{membershipStore_},
               udpGateway_{io_, workers_, routingService_, udpPort},
               tcpManager_{io_, workers_},
-              sender_{udpGateway_, tcpManager_},
-              udpPort_{udpPort},
-              workerNum_{workerNum} {}
+              sender_{udpGateway_, tcpManager_} {}
 
-        int start() override {
-            if (started_) {
-                return 0;
-            }
+        int start() {
+            if (started_) return 0;
 
             const auto udpRes = udpGateway_.start();
-            if (udpRes != 0) {
-                return udpRes;
-            }
+            if (udpRes != 0) return udpRes;
 
             started_ = true;
-            ioThread_ = std::thread([this]() {
-                io_.run();
-            });
-
+            ioThread_ = std::thread([this]() { io_.run(); });
             return 0;
         }
 
-        int stop() override {
-            if (!started_) {
-                return 0;
-            }
+        int stop() {
+            if (!started_) return 0;
 
             started_ = false;
             udpGateway_.stop();
@@ -73,10 +64,26 @@ namespace vpsm::server::infrastructure {
         adapter::boostImpl::TcpManagerBoost tcpManager_;
         adapter::GatewayManager sender_;
 
-        std::uint16_t udpPort_;
-        std::uint16_t workerNum_;
         std::thread ioThread_;
         bool started_ = false;
-
     };
+
+    DataPlaneBoost::DataPlaneBoost(std::uint16_t udpPort, std::uint16_t workerNum)
+        : impl_(new Impl(udpPort, workerNum)) {}
+
+    DataPlaneBoost::~DataPlaneBoost() {
+        if (impl_ != nullptr) {
+            impl_->stop();
+            delete impl_;
+            impl_ = nullptr;
+        }
+    }
+
+    int DataPlaneBoost::start() {
+        return impl_->start();
+    }
+
+    int DataPlaneBoost::stop() {
+        return impl_->stop();
+    }
 }

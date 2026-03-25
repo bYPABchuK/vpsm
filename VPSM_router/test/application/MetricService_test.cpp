@@ -106,9 +106,3 @@ namespace {
     }
 
 }
-
-namespace vpsm::server::port {
-    void IMetricService::start() {}
-    void IMetricService::stop() {}
-}
-
