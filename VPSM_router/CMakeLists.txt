@@ -25,6 +25,7 @@ add_executable(unit_tests
     src/application/ControlPlane/HealthEndpoint.cpp
     src/application/ControlPlane/JsonRequestDecoder.cpp
     src/application/ControlPlane/JsonResponseEncoder.cpp
+    src/application/ControlPlane/JsonSupport.cpp
     src/application/ControlPlane/JsonCreatePeerDecoder.cpp
     src/application/ControlPlane/JsonCreatePeerResponseEncoder.cpp
     src/application/ControlPlane/JsonCreateNetworkDecoder.cpp
@@ -100,6 +101,7 @@ add_executable(vpsm_router
     src/application/ControlPlane/HealthEndpoint.cpp
     src/application/ControlPlane/JsonRequestDecoder.cpp
     src/application/ControlPlane/JsonResponseEncoder.cpp
+    src/application/ControlPlane/JsonSupport.cpp
     src/application/ControlPlane/JsonCreatePeerDecoder.cpp
     src/application/ControlPlane/JsonCreatePeerResponseEncoder.cpp
     src/application/ControlPlane/JsonCreateNetworkDecoder.cpp

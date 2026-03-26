@@ -1,63 +1,41 @@
 #include "JsonLoginDecoder.hpp"
-
-#include <boost/json/parse.hpp>
-#include <boost/system/error_code.hpp>
+#include "JsonSupport.hpp"
 
 namespace vpsm::server::application {
-    namespace {
-        bool isJsonContentType(const ControlRequest& request) {
-            const auto it = request.headers.find("Content-Type");
-            if (it != request.headers.end() && it->second.find("application/json") != std::string::npos) {
-                return true;
-            }
-
-            const auto lowerIt = request.headers.find("content-type");
-            return lowerIt != request.headers.end() && lowerIt->second.find("application/json") != std::string::npos;
-        }
-    }
-
     std::optional<dto::LoginDto> JsonLoginDecoder::decode(const ControlRequest& request) {
-        if (!isJsonContentType(request)) {
+        if (!json_support::hasJsonContentType(request)) {
             return std::nullopt;
         }
 
-        const std::string jsonText(request.body.begin(), request.body.end());
-
-        boost::system::error_code ec;
-        const auto value = boost::json::parse(jsonText, ec);
-        if (ec || !value.is_object()) {
+        const auto object = json_support::parseJsonObject(request);
+        if (!object) {
             return std::nullopt;
         }
 
-        const auto& object = value.as_object();
-        const auto nicknameIt = object.find("nickname");
-        const auto nickIt = object.find("nick");
-        if ((nicknameIt == object.end() || !nicknameIt->value().is_string())
-            && (nickIt == object.end() || !nickIt->value().is_string())) {
+        const auto nickname = json_support::readString(*object, "nickname");
+        const auto nick = json_support::readString(*object, "nick");
+        if (!nickname && !nick) {
             return std::nullopt;
         }
 
-        const auto passwordIt = object.find("passwordHash");
-        const auto passwordRawIt = object.find("password");
+        const auto passwordIt = object->find("passwordHash");
+        const auto passwordRawIt = object->find("password");
+        if (passwordIt != object->end() && !passwordIt->value().is_string()) {
+            return std::nullopt;
+        }
+        if (passwordIt == object->end() && passwordRawIt != object->end() && !passwordRawIt->value().is_string()) {
+            return std::nullopt;
+        }
+
         std::string passwordHash;
-        if (passwordIt != object.end()) {
-            if (!passwordIt->value().is_string()) {
-                return std::nullopt;
-            }
-            passwordHash = std::string(passwordIt->value().as_string().c_str());
-        } else if (passwordRawIt != object.end()) {
-            if (!passwordRawIt->value().is_string()) {
-                return std::nullopt;
-            }
-            passwordHash = std::string(passwordRawIt->value().as_string().c_str());
+        if (const auto password = json_support::readString(*object, "passwordHash")) {
+            passwordHash = *password;
+        } else if (const auto passwordRaw = json_support::readString(*object, "password")) {
+            passwordHash = *passwordRaw;
         }
-
-        const std::string nickname = (nicknameIt != object.end() && nicknameIt->value().is_string())
-            ? std::string(nicknameIt->value().as_string().c_str())
-            : std::string(nickIt->value().as_string().c_str());
 
         return dto::LoginDto{
-            .nickname = nickname,
+            .nickname = nickname ? *nickname : *nick,
             .passwordHash = std::move(passwordHash),
         };
     }

@@ -1,13 +1,12 @@
 #include "JsonNetworkPeersListResponseEncoder.hpp"
+#include "JsonSupport.hpp"
 
 #include <boost/json/array.hpp>
 #include <boost/json/object.hpp>
-#include <boost/json/serialize.hpp>
 
 namespace vpsm::server::application {
     ControlResponse JsonNetworkPeersListResponseEncoder::encode(const dto::NetworkPeersListResultDto& response) {
-        boost::json::object out;
-        out["ok"] = response.ok;
+        auto out = json_support::makeBaseResult(response.ok, response.error);
 
         boost::json::array items;
         for (const auto& peer : response.peers) {
@@ -18,15 +17,6 @@ namespace vpsm::server::application {
         }
         out["peers"] = std::move(items);
 
-        if (response.error.has_value()) {
-            out["error"] = *response.error;
-        }
-
-        const auto text = boost::json::serialize(out);
-        return ControlResponse{
-            .status = response.status,
-            .contentType = "application/json",
-            .body = std::vector<std::uint8_t>(text.begin(), text.end()),
-        };
+        return json_support::toJsonResponse(response.status, out);
     }
 }

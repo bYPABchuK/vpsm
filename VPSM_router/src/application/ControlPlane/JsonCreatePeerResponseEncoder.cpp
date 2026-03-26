@@ -1,26 +1,16 @@
 #include "JsonCreatePeerResponseEncoder.hpp"
+#include "JsonSupport.hpp"
 
 #include <boost/json/object.hpp>
-#include <boost/json/serialize.hpp>
 
 namespace vpsm::server::application {
     ControlResponse JsonCreatePeerResponseEncoder::encode(const dto::CreatePeerResultDto& response) {
-        boost::json::object out;
-        out["ok"] = response.ok;
+        auto out = json_support::makeBaseResult(response.ok, response.error);
 
         if (response.peerId.has_value()) {
             out["peerId"] = static_cast<std::int64_t>(*response.peerId);
         }
 
-        if (response.error.has_value()) {
-            out["error"] = *response.error;
-        }
-
-        const auto text = boost::json::serialize(out);
-        return ControlResponse{
-            .status = response.status,
-            .contentType = "application/json",
-            .body = std::vector<std::uint8_t>(text.begin(), text.end()),
-        };
+        return json_support::toJsonResponse(response.status, out);
     }
 }
