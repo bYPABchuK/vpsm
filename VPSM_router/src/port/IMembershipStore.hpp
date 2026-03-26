@@ -1,7 +1,10 @@
 #pragma once
 
+#include "../domain/model/peer.hpp"
+
 #include <cstdint>
 #include <optional>
+#include <vector>
 namespace vpsm::server::port {
     class IMembershipStore {
     public:
@@ -22,5 +25,6 @@ namespace vpsm::server::port {
         virtual bool hasPeer(std::uint32_t networkId, std::uint64_t peerId) const = 0;
         virtual std::optional<std::uint32_t> resolveVip(std::uint32_t networkId, std::uint64_t peerId) const = 0;
         virtual std::optional<std::uint64_t> resolvePeer(std::uint32_t networkId, std::uint32_t vip) const = 0;
+        virtual std::vector<domain::Peer> listPeers(std::uint32_t networkId) const = 0;
     };
 }

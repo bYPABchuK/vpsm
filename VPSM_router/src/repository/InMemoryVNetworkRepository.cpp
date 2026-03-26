@@ -39,6 +39,18 @@ namespace vpsm::server::repository {
         return it->second;
     }
 
+    std::vector<domain::VNetwork> InMemoryVNetworkRepository::listNetworks() const {
+        std::shared_lock lock(mutex_);
+
+        std::vector<domain::VNetwork> out;
+        out.reserve(networks_.size());
+        for (const auto& [_, network] : networks_) {
+            out.push_back(network);
+        }
+
+        return out;
+    }
+
     bool InMemoryVNetworkRepository::exists(std::uint64_t networkId) const {
         std::shared_lock lock(mutex_);
         return networks_.find(networkId) != networks_.end();

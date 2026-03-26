@@ -25,8 +25,28 @@ add_executable(unit_tests
     src/application/ControlPlane/HealthEndpoint.cpp
     src/application/ControlPlane/JsonRequestDecoder.cpp
     src/application/ControlPlane/JsonResponseEncoder.cpp
+    src/application/ControlPlane/JsonCreatePeerDecoder.cpp
+    src/application/ControlPlane/JsonCreatePeerResponseEncoder.cpp
+    src/application/ControlPlane/JsonCreateNetworkDecoder.cpp
+    src/application/ControlPlane/JsonCreateNetworkResponseEncoder.cpp
+    src/application/ControlPlane/JsonJoinNetworkDecoder.cpp
+    src/application/ControlPlane/JsonJoinNetworkResponseEncoder.cpp
+    src/application/ControlPlane/JsonLeaveNetworkDecoder.cpp
+    src/application/ControlPlane/JsonLeaveNetworkResponseEncoder.cpp
+    src/application/ControlPlane/JsonLoginDecoder.cpp
+    src/application/ControlPlane/JsonLoginResponseEncoder.cpp
+    src/application/ControlPlane/SessionStore.cpp
     src/application/ControlPlane/DispatchEchoEndpoint.cpp
-    src/application/ControlPlane/UserServiceEndpoint.cpp
+    src/application/ControlPlane/Endpoints/CreatePeerEndpoint.cpp
+    src/application/ControlPlane/Endpoints/CreateNetworkEndpoint.cpp
+    src/application/ControlPlane/Endpoints/JoinNetworkEndpoint.cpp
+    src/application/ControlPlane/Endpoints/LeaveNetworkEndpoint.cpp
+    src/application/ControlPlane/Endpoints/LoginEndpoint.cpp
+    src/application/ControlPlane/Endpoints/CreateNetworkAuthEndpoint.cpp
+    src/application/ControlPlane/Endpoints/NetworkUserAddEndpoint.cpp
+    src/application/ControlPlane/Endpoints/UserNetworkListEndpoint.cpp
+    src/application/ControlPlane/Endpoints/NetworkPeersListEndpoint.cpp
+    src/application/DTO/JsonDtoDecoder.cpp
     src/adapter/MembershipStore.cpp
     src/adapter/FileMetricsSink.cpp
     src/adapter/boost/ControlHttpBoost.cpp
@@ -76,8 +96,28 @@ add_executable(vpsm_router
     src/application/ControlPlane/HealthEndpoint.cpp
     src/application/ControlPlane/JsonRequestDecoder.cpp
     src/application/ControlPlane/JsonResponseEncoder.cpp
+    src/application/ControlPlane/JsonCreatePeerDecoder.cpp
+    src/application/ControlPlane/JsonCreatePeerResponseEncoder.cpp
+    src/application/ControlPlane/JsonCreateNetworkDecoder.cpp
+    src/application/ControlPlane/JsonCreateNetworkResponseEncoder.cpp
+    src/application/ControlPlane/JsonJoinNetworkDecoder.cpp
+    src/application/ControlPlane/JsonJoinNetworkResponseEncoder.cpp
+    src/application/ControlPlane/JsonLeaveNetworkDecoder.cpp
+    src/application/ControlPlane/JsonLeaveNetworkResponseEncoder.cpp
+    src/application/ControlPlane/JsonLoginDecoder.cpp
+    src/application/ControlPlane/JsonLoginResponseEncoder.cpp
+    src/application/ControlPlane/SessionStore.cpp
     src/application/ControlPlane/DispatchEchoEndpoint.cpp
-    src/application/ControlPlane/UserServiceEndpoint.cpp
+    src/application/ControlPlane/Endpoints/CreatePeerEndpoint.cpp
+    src/application/ControlPlane/Endpoints/CreateNetworkEndpoint.cpp
+    src/application/ControlPlane/Endpoints/JoinNetworkEndpoint.cpp
+    src/application/ControlPlane/Endpoints/LeaveNetworkEndpoint.cpp
+    src/application/ControlPlane/Endpoints/LoginEndpoint.cpp
+    src/application/ControlPlane/Endpoints/CreateNetworkAuthEndpoint.cpp
+    src/application/ControlPlane/Endpoints/NetworkUserAddEndpoint.cpp
+    src/application/ControlPlane/Endpoints/UserNetworkListEndpoint.cpp
+    src/application/ControlPlane/Endpoints/NetworkPeersListEndpoint.cpp
+    src/application/DTO/JsonDtoDecoder.cpp
     src/adapter/MembershipStore.cpp
     src/adapter/FileMetricsSink.cpp
     src/adapter/boost/ControlHttpBoost.cpp

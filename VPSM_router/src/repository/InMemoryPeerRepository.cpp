@@ -30,6 +30,18 @@ namespace vpsm::server::repository {
         return it->second;
     }
 
+    std::optional<std::uint64_t> InMemoryPeerRepository::findPeerIdByNickname(const std::string& nickname) const {
+        std::shared_lock lock(mutex_);
+
+        for (const auto& [peerId, storedNickname] : nicknameByPeerId_) {
+            if (storedNickname == nickname) {
+                return peerId;
+            }
+        }
+
+        return std::nullopt;
+    }
+
     bool InMemoryPeerRepository::exists(std::uint64_t peerId) const {
         std::shared_lock lock(mutex_);
         return passwordByPeerId_.find(peerId) != passwordByPeerId_.end();

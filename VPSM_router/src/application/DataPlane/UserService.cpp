@@ -17,6 +17,15 @@ namespace vpsm::server::application {
         return peerRepository_.createPeer(nickname, passwordHash);
     }
 
+    std::optional<std::uint64_t> UserService::findPeerIdByNickname(const std::string& nickname) const {
+        return peerRepository_.findPeerIdByNickname(nickname);
+    }
+
+    bool UserService::verifyPeerPassword(std::uint64_t peerId, const std::string& passwordHash) const {
+        const auto stored = peerRepository_.getPasswordHash(peerId);
+        return stored.has_value() && *stored == passwordHash;
+    }
+
     bool UserService::deletePeer(std::uint64_t peerId) {
         if (!peerRepository_.exists(peerId)) {
             return false;
@@ -95,5 +104,25 @@ namespace vpsm::server::application {
         }
 
         return membershipStore_.releaseVip(networkId, peerId);
+    }
+
+    std::vector<domain::VNetwork> UserService::listUserNetworks(std::uint64_t peerId) const {
+        std::vector<domain::VNetwork> result;
+        const auto networks = networkRepository_.listNetworks();
+        for (const auto& network : networks) {
+            if (membershipStore_.hasPeer(static_cast<std::uint32_t>(network.id), peerId)) {
+                result.push_back(network);
+            }
+        }
+
+        return result;
+    }
+
+    std::vector<domain::Peer> UserService::listNetworkPeers(std::uint64_t networkId) const {
+        if (!networkRepository_.exists(networkId)) {
+            return {};
+        }
+
+        return membershipStore_.listPeers(static_cast<std::uint32_t>(networkId));
     }
 }

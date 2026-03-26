@@ -50,6 +50,10 @@ public:
         std::uint32_t vip
     ) const override;
 
+    std::vector<domain::Peer> listPeers(
+        std::uint32_t networkId
+    ) const override;
+
 private:
     struct NetworkState {
         std::unordered_map<std::uint64_t, domain::Peer> peersById;

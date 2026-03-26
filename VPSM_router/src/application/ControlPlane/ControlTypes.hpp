@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -10,7 +11,9 @@ namespace vpsm::server::application {
         std::string method;
         std::string path;
         std::unordered_map<std::string, std::string> headers;
+        std::unordered_map<std::string, std::string> pathParams;
         std::vector<std::uint8_t> body;
+        std::optional<std::uint64_t> authenticatedPeerId;
     };
 
     struct ControlResponse {

@@ -25,6 +25,10 @@ namespace {
             return std::nullopt;
         }
 
+        std::optional<std::uint64_t> findPeerIdByNickname(const std::string&) const override {
+            return std::nullopt;
+        }
+
         bool exists(std::uint64_t peerId) const override {
             const auto it = existsByPeerId.find(peerId);
             return it != existsByPeerId.end() ? it->second : false;
@@ -58,6 +62,15 @@ namespace {
             }
 
             return it->second;
+        }
+
+        std::vector<VNetwork> listNetworks() const override {
+            std::vector<VNetwork> out;
+            out.reserve(networksById.size());
+            for (const auto& [_, n] : networksById) {
+                out.push_back(n);
+            }
+            return out;
         }
 
         bool exists(std::uint64_t networkId) const override {
@@ -108,6 +121,10 @@ namespace {
 
         std::optional<std::uint64_t> resolvePeer(std::uint32_t, std::uint32_t) const override {
             return std::nullopt;
+        }
+
+        std::vector<vpsm::server::domain::Peer> listPeers(std::uint32_t) const override {
+            return {};
         }
 
         std::optional<std::uint32_t> allocateVipResult = 123;

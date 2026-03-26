@@ -16,6 +16,7 @@ namespace vpsm::server::port {
         virtual bool deletePeer(std::uint64_t peerId) = 0;
 
         virtual std::optional<std::string> getPasswordHash(std::uint64_t peerId) const = 0;
+        virtual std::optional<std::uint64_t> findPeerIdByNickname(const std::string& nickname) const = 0;
         virtual bool exists(std::uint64_t peerId) const = 0;
     };
 }

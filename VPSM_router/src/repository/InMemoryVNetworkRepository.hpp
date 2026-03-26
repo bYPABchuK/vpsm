@@ -17,6 +17,7 @@ namespace vpsm::server::repository {
 
         bool deleteNetwork(std::uint64_t networkId) override;
         std::optional<domain::VNetwork> getNetwork(std::uint64_t networkId) const override;
+        std::vector<domain::VNetwork> listNetworks() const override;
         bool exists(std::uint64_t networkId) const override;
 
     private:

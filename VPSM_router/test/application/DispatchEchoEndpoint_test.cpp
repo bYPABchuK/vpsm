@@ -1,4 +1,6 @@
 #include "../../src/application/ControlPlane/DispatchEchoEndpoint.hpp"
+#include "../../src/application/ControlPlane/JsonRequestDecoder.hpp"
+#include "../../src/application/ControlPlane/JsonResponseEncoder.hpp"
 
 #include <gtest/gtest.h>
 
@@ -13,7 +15,9 @@ namespace {
     }
 
     TEST(DispatchEchoEndpointTest, handle_ValidJson_Returns200JsonResponseTrue) {
-        DispatchEchoEndpoint endpoint;
+        vpsm::server::application::JsonRequestDecoder decoder;
+        vpsm::server::application::JsonResponseEncoder encoder;
+        DispatchEchoEndpoint endpoint(decoder, encoder);
 
         const auto response = endpoint.handle(ControlRequest{
             .method = "POST",
@@ -27,7 +31,9 @@ namespace {
     }
 
     TEST(DispatchEchoEndpointTest, handle_InvalidJson_Returns400True) {
-        DispatchEchoEndpoint endpoint;
+        vpsm::server::application::JsonRequestDecoder decoder;
+        vpsm::server::application::JsonResponseEncoder encoder;
+        DispatchEchoEndpoint endpoint(decoder, encoder);
 
         const auto response = endpoint.handle(ControlRequest{
             .method = "POST",
@@ -40,7 +46,9 @@ namespace {
     }
 
     TEST(DispatchEchoEndpointTest, handle_WrongContentType_Returns415True) {
-        DispatchEchoEndpoint endpoint;
+        vpsm::server::application::JsonRequestDecoder decoder;
+        vpsm::server::application::JsonResponseEncoder encoder;
+        DispatchEchoEndpoint endpoint(decoder, encoder);
 
         const auto response = endpoint.handle(ControlRequest{
             .method = "POST",

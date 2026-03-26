@@ -45,6 +45,10 @@ namespace {
             return it->second;
         }
 
+        std::vector<vpsm::server::domain::Peer> listPeers(std::uint32_t) const override {
+            return {};
+        }
+
         std::unordered_map<std::uint64_t, std::uint64_t> resolvePeerByKey;
 
     private:

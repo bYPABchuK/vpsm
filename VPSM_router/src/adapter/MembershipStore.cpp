@@ -183,4 +183,23 @@ namespace vpsm::server::adapter {
     
         return vipIt->second;
     }
+
+    std::vector<domain::Peer> MembershipRegistry::listPeers(
+        std::uint32_t networkId
+    ) const {
+        std::shared_lock lock(mutex_);
+
+        auto netIt = networks_.find(networkId);
+        if (netIt == networks_.end()) {
+            return {};
+        }
+
+        std::vector<domain::Peer> out;
+        out.reserve(netIt->second.peersById.size());
+        for (const auto& [_, peer] : netIt->second.peersById) {
+            out.push_back(peer);
+        }
+
+        return out;
+    }
 }
