@@ -3,7 +3,7 @@
 #include "IControlEndpoint.hpp"
 #include "JsonRequestDecoder.hpp"
 #include "JsonResponseEncoder.hpp"
-#include "../port/IUserService.hpp"
+#include "../../port/IUserService.hpp"
 
 namespace vpsm::server::application {
     class UserServiceEndpoint final : public IControlEndpoint {

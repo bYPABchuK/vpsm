@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../application/IControlRouter.hpp"
+#include "../../application/ControlPlane/IControlRouter.hpp"
 
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>

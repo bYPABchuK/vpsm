@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../port/IMetricService.hpp"
-#include "../port/IMetricCounter.hpp"
-#include "../port/IMetricsSink.hpp"
+#include "../../port/IMetricService.hpp"
+#include "../../port/IMetricCounter.hpp"
+#include "../../port/IMetricsSink.hpp"
 namespace vpsm::server::application {
     class MetricService : public port::IMetricService {
         public:

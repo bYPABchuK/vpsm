@@ -2,11 +2,11 @@
 
 #include "../adapter/MembershipStore.hpp"
 #include "../adapter/boost/ControlHttpBoost.hpp"
-#include "../application/ControlRouter.hpp"
-#include "../application/DispatchEchoEndpoint.hpp"
-#include "../application/HealthEndpoint.hpp"
-#include "../application/UserService.hpp"
-#include "../application/UserServiceEndpoint.hpp"
+#include "../application/ControlPlane/ControlRouter.hpp"
+#include "../application/ControlPlane/DispatchEchoEndpoint.hpp"
+#include "../application/ControlPlane/HealthEndpoint.hpp"
+#include "../application/DataPlane/UserService.hpp"
+#include "../application/ControlPlane/UserServiceEndpoint.hpp"
 #include "../repository/InMemoryPeerRepository.hpp"
 #include "../repository/InMemoryVNetworkRepository.hpp"
 

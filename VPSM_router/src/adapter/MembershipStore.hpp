@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../port/IMembershipStore.hpp"
-#include "../application/VipAllocator.hpp"
+#include "../application/DataPlane/VipAllocator.hpp"
 #include "../domain/model/peer.hpp"
 
 #include <cstdint>

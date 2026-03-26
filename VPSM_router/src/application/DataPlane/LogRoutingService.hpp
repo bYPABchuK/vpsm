@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../port/IRoutingService.hpp"
-#include "../port/IMetricCounter.hpp"
+#include "../../port/IRoutingService.hpp"
+#include "../../port/IMetricCounter.hpp"
 namespace vpsm::server::application {
     class LogRoutingService : public port::IRoutingService {
     public:

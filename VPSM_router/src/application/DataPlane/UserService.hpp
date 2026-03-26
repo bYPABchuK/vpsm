@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../port/IUserService.hpp"
-#include "../port/IPeerRepository.hpp"
-#include "../port/IVNetworkRepository.hpp"
-#include "../port/IMembershipStore.hpp"
+#include "../../port/IUserService.hpp"
+#include "../../port/IPeerRepository.hpp"
+#include "../../port/IVNetworkRepository.hpp"
+#include "../../port/IMembershipStore.hpp"
 
 namespace vpsm::server::application {
     class UserService final : public port::IUserService {

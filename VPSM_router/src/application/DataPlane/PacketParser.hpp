@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../domain/model/packetIn.hpp"
-#include "../domain/model/headerV1.hpp"
+#include "../../domain/model/packetIn.hpp"
+#include "../../domain/model/headerV1.hpp"
 #include <optional>
 namespace vpsm::server::application {
     class PacketParser {

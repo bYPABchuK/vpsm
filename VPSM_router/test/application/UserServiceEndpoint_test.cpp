@@ -1,4 +1,4 @@
-#include "../../src/application/UserServiceEndpoint.hpp"
+#include "../../src/application/ControlPlane/UserServiceEndpoint.hpp"
 
 #include <gtest/gtest.h>
 

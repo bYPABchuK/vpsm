@@ -1,5 +1,5 @@
-#include "../../src/application/ControlRouter.hpp"
-#include "../../src/application/HealthEndpoint.hpp"
+#include "../../src/application/ControlPlane/ControlRouter.hpp"
+#include "../../src/application/ControlPlane/HealthEndpoint.hpp"
 
 #include <gtest/gtest.h>
 

@@ -14,19 +14,19 @@ enable_testing()
 include(GoogleTest)
 
 add_executable(unit_tests
-    src/application/PacketParserV1.cpp
-    src/application/PacketParserV2.cpp
-    src/application/AuthServiceV2.cpp
-    src/application/RoutingService.cpp
-    src/application/UserService.cpp
-    src/application/AtomicMetricCounter.cpp
-    src/application/MetricService.cpp
-    src/application/ControlRouter.cpp
-    src/application/HealthEndpoint.cpp
-    src/application/JsonRequestDecoder.cpp
-    src/application/JsonResponseEncoder.cpp
-    src/application/DispatchEchoEndpoint.cpp
-    src/application/UserServiceEndpoint.cpp
+    src/application/DataPlane/PacketParserV1.cpp
+    src/application/DataPlane/PacketParserV2.cpp
+    src/application/DataPlane/AuthServiceV2.cpp
+    src/application/DataPlane/RoutingService.cpp
+    src/application/DataPlane/UserService.cpp
+    src/application/DataPlane/AtomicMetricCounter.cpp
+    src/application/DataPlane/MetricService.cpp
+    src/application/ControlPlane/ControlRouter.cpp
+    src/application/ControlPlane/HealthEndpoint.cpp
+    src/application/ControlPlane/JsonRequestDecoder.cpp
+    src/application/ControlPlane/JsonResponseEncoder.cpp
+    src/application/ControlPlane/DispatchEchoEndpoint.cpp
+    src/application/ControlPlane/UserServiceEndpoint.cpp
     src/adapter/MembershipStore.cpp
     src/adapter/FileMetricsSink.cpp
     src/adapter/boost/ControlHttpBoost.cpp
@@ -65,19 +65,19 @@ gtest_discover_tests(unit_tests)
 
 add_executable(vpsm_router
     src/main.cpp
-    src/application/PacketParserV1.cpp
-    src/application/PacketParserV2.cpp
-    src/application/AuthServiceV2.cpp
-    src/application/RoutingService.cpp
-    src/application/UserService.cpp
-    src/application/AtomicMetricCounter.cpp
-    src/application/MetricService.cpp
-    src/application/ControlRouter.cpp
-    src/application/HealthEndpoint.cpp
-    src/application/JsonRequestDecoder.cpp
-    src/application/JsonResponseEncoder.cpp
-    src/application/DispatchEchoEndpoint.cpp
-    src/application/UserServiceEndpoint.cpp
+    src/application/DataPlane/PacketParserV1.cpp
+    src/application/DataPlane/PacketParserV2.cpp
+    src/application/DataPlane/AuthServiceV2.cpp
+    src/application/DataPlane/RoutingService.cpp
+    src/application/DataPlane/UserService.cpp
+    src/application/DataPlane/AtomicMetricCounter.cpp
+    src/application/DataPlane/MetricService.cpp
+    src/application/ControlPlane/ControlRouter.cpp
+    src/application/ControlPlane/HealthEndpoint.cpp
+    src/application/ControlPlane/JsonRequestDecoder.cpp
+    src/application/ControlPlane/JsonResponseEncoder.cpp
+    src/application/ControlPlane/DispatchEchoEndpoint.cpp
+    src/application/ControlPlane/UserServiceEndpoint.cpp
     src/adapter/MembershipStore.cpp
     src/adapter/FileMetricsSink.cpp
     src/adapter/boost/ControlHttpBoost.cpp

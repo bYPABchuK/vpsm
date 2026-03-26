@@ -1,4 +1,4 @@
-#include "../../src/application/AtomicMetricCounter.hpp"
+#include "../../src/application/DataPlane/AtomicMetricCounter.hpp"
 
 #include <gtest/gtest.h>
 

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../domain/model/headerV2.hpp"
-#include "../domain/model/packetIn.hpp"
+#include "../../domain/model/headerV2.hpp"
+#include "../../domain/model/packetIn.hpp"
 
 #include <optional>
 

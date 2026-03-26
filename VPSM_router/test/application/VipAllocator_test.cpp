@@ -1,4 +1,4 @@
-#include "../../src/application/VipAllocator.hpp"
+#include "../../src/application/DataPlane/VipAllocator.hpp"
 
 #include <gtest/gtest.h>
 

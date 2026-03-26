@@ -4,7 +4,7 @@
 #include "../adapter/MembershipStore.hpp"
 #include "../adapter/boost/TcpManagerBoost.hpp"
 #include "../adapter/boost/UdpGatewayBoost.hpp"
-#include "../application/RoutingService.hpp"
+#include "../application/DataPlane/RoutingService.hpp"
 
 #include <boost/asio/executor_work_guard.hpp>
 #include <boost/asio/io_context.hpp>

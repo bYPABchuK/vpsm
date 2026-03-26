@@ -1,4 +1,4 @@
-#include "../../src/application/DispatchEchoEndpoint.hpp"
+#include "../../src/application/ControlPlane/DispatchEchoEndpoint.hpp"
 
 #include <gtest/gtest.h>
 
