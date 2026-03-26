@@ -3,7 +3,7 @@
 namespace vpsm::server::application::endpoints {
     ControlResponse CreateNetworkEndpoint::handle(const ControlRequest& request) {
         if (request.method != "POST") {
-            return ControlResponse{.status = 405, .contentType = "text/plain", .body = {'m','e','t','h','o','d','_','n','o','t','_','a','l','l','o','w','e','d'}};
+            return responseEncoder_.encode(dto::CreateNetworkResultDto{.ok = false, .status = 405, .error = "method_not_allowed"});
         }
 
         const auto dto = requestDecoder_.decode(request);

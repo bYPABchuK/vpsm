@@ -8,30 +8,30 @@
 namespace vpsm::server::application::endpoints {
     ControlResponse CreateNetworkAuthEndpoint::handle(const ControlRequest& request) {
         if (request.method != "POST") {
-            return ControlResponse{.status = 405, .contentType = "text/plain", .body = {'m','e','t','h','o','d','_','n','o','t','_','a','l','l','o','w','e','d'}};
+            return responseEncoder_.encode(dto::CreateNetworkAuthResultDto{.ok = false, .status = 405, .error = "method_not_allowed"});
         }
 
         if (!request.authenticatedPeerId.has_value()) {
-            return ControlResponse{.status = 402, .contentType = "text/plain", .body = {'a','u','t','h','_','r','e','q','u','i','r','e','d'}};
+            return responseEncoder_.encode(dto::CreateNetworkAuthResultDto{.ok = false, .status = 402, .error = "auth_required"});
         }
 
         boost::system::error_code ec;
         const auto value = boost::json::parse(std::string(request.body.begin(), request.body.end()), ec);
         if (ec || !value.is_object()) {
-            return ControlResponse{.status = 400, .contentType = "text/plain", .body = {'i','n','v','a','l','i','d','_','p','a','y','l','o','a','d'}};
+            return responseEncoder_.encode(dto::CreateNetworkAuthResultDto{.ok = false, .status = 400, .error = "invalid_payload"});
         }
 
         const auto& object = value.as_object();
         const auto nameIt = object.find("name");
         if (nameIt == object.end() || !nameIt->value().is_string()) {
-            return ControlResponse{.status = 400, .contentType = "text/plain", .body = {'n','a','m','e','_','r','e','q','u','i','r','e','d'}};
+            return responseEncoder_.encode(dto::CreateNetworkAuthResultDto{.ok = false, .status = 400, .error = "name_required"});
         }
 
         std::string password;
         const auto passIt = object.find("passwordHash");
         if (passIt != object.end()) {
             if (!passIt->value().is_string()) {
-                return ControlResponse{.status = 400, .contentType = "text/plain", .body = {'i','n','v','a','l','i','d','_','p','a','s','s','w','o','r','d'}};
+                return responseEncoder_.encode(dto::CreateNetworkAuthResultDto{.ok = false, .status = 400, .error = "invalid_password"});
             }
             password = std::string(passIt->value().as_string().c_str());
         }
@@ -42,13 +42,9 @@ namespace vpsm::server::application::endpoints {
             password
         );
         if (!networkId.has_value()) {
-            return ControlResponse{.status = 400, .contentType = "text/plain", .body = {'c','r','e','a','t','e','_','f','a','i','l','e','d'}};
+            return responseEncoder_.encode(dto::CreateNetworkAuthResultDto{.ok = false, .status = 400, .error = "create_failed"});
         }
 
-        boost::json::object out;
-        out["ok"] = true;
-        out["networkId"] = static_cast<std::int64_t>(*networkId);
-        const auto text = boost::json::serialize(out);
-        return ControlResponse{.status = 200, .contentType = "application/json", .body = std::vector<std::uint8_t>(text.begin(), text.end())};
+        return responseEncoder_.encode(dto::CreateNetworkAuthResultDto{.ok = true, .status = 200, .networkId = *networkId});
     }
 }

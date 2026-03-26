@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace vpsm::server::application::dto {
     struct LoginDto {
@@ -90,6 +91,31 @@ namespace vpsm::server::application::dto {
         std::uint16_t status = 400;
         std::optional<std::uint32_t> vip;
         bool alreadyExists = false;
+        std::optional<std::string> error;
+    };
+
+    struct UserNetworkItemDto {
+        std::uint64_t id = 0;
+        std::string name;
+        std::uint64_t ownerPeerId = 0;
+    };
+
+    struct UserNetworkListResultDto {
+        bool ok = false;
+        std::uint16_t status = 400;
+        std::vector<UserNetworkItemDto> networks;
+        std::optional<std::string> error;
+    };
+
+    struct NetworkPeerItemDto {
+        std::uint64_t peerId = 0;
+        std::uint32_t vip = 0;
+    };
+
+    struct NetworkPeersListResultDto {
+        bool ok = false;
+        std::uint16_t status = 400;
+        std::vector<NetworkPeerItemDto> peers;
         std::optional<std::string> error;
     };
 }
