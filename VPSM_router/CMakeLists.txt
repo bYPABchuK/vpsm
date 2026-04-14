@@ -41,13 +41,11 @@ add_executable(unit_tests
     src/application/ControlPlane/JsonLoginDecoder.cpp
     src/application/ControlPlane/JsonLoginResponseEncoder.cpp
     src/application/ControlPlane/SessionStore.cpp
-    src/application/ControlPlane/DispatchEchoEndpoint.cpp
     src/application/ControlPlane/Endpoints/CreatePeerEndpoint.cpp
     src/application/ControlPlane/Endpoints/CreateNetworkEndpoint.cpp
     src/application/ControlPlane/Endpoints/JoinNetworkEndpoint.cpp
     src/application/ControlPlane/Endpoints/LeaveNetworkEndpoint.cpp
     src/application/ControlPlane/Endpoints/LoginEndpoint.cpp
-    src/application/ControlPlane/Endpoints/CreateNetworkAuthEndpoint.cpp
     src/application/ControlPlane/Endpoints/NetworkUserAddEndpoint.cpp
     src/application/ControlPlane/Endpoints/UserNetworkListEndpoint.cpp
     src/application/ControlPlane/Endpoints/NetworkPeersListEndpoint.cpp
@@ -66,7 +64,6 @@ add_executable(unit_tests
     test/application/PacketParserV2_test.cpp
     test/application/AuthServiceV2_test.cpp
     test/application/ControlRouter_test.cpp
-    test/application/DispatchEchoEndpoint_test.cpp
     test/application/UserServiceEndpoint_test.cpp
     test/application/RoutingService_test.cpp
     test/application/UserService_test.cpp
@@ -117,13 +114,11 @@ add_executable(vpsm_router
     src/application/ControlPlane/JsonLoginDecoder.cpp
     src/application/ControlPlane/JsonLoginResponseEncoder.cpp
     src/application/ControlPlane/SessionStore.cpp
-    src/application/ControlPlane/DispatchEchoEndpoint.cpp
     src/application/ControlPlane/Endpoints/CreatePeerEndpoint.cpp
     src/application/ControlPlane/Endpoints/CreateNetworkEndpoint.cpp
     src/application/ControlPlane/Endpoints/JoinNetworkEndpoint.cpp
     src/application/ControlPlane/Endpoints/LeaveNetworkEndpoint.cpp
     src/application/ControlPlane/Endpoints/LoginEndpoint.cpp
-    src/application/ControlPlane/Endpoints/CreateNetworkAuthEndpoint.cpp
     src/application/ControlPlane/Endpoints/NetworkUserAddEndpoint.cpp
     src/application/ControlPlane/Endpoints/UserNetworkListEndpoint.cpp
     src/application/ControlPlane/Endpoints/NetworkPeersListEndpoint.cpp

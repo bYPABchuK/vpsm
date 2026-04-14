@@ -3,7 +3,6 @@
 #include "../adapter/MembershipStore.hpp"
 #include "../adapter/boost/ControlHttpBoost.hpp"
 #include "../application/ControlPlane/ControlRouter.hpp"
-#include "../application/ControlPlane/DispatchEchoEndpoint.hpp"
 #include "../application/ControlPlane/JsonCreateNetworkDecoder.hpp"
 #include "../application/ControlPlane/JsonCreateNetworkAuthResponseEncoder.hpp"
 #include "../application/ControlPlane/JsonCreateNetworkResponseEncoder.hpp"
@@ -11,7 +10,6 @@
 #include "../application/ControlPlane/JsonNetworkUserAddResponseEncoder.hpp"
 #include "../application/ControlPlane/JsonCreatePeerDecoder.hpp"
 #include "../application/ControlPlane/JsonCreatePeerResponseEncoder.hpp"
-#include "../application/ControlPlane/HealthEndpoint.hpp"
 #include "../application/ControlPlane/JsonJoinNetworkDecoder.hpp"
 #include "../application/ControlPlane/JsonJoinNetworkResponseEncoder.hpp"
 #include "../application/ControlPlane/JsonLeaveNetworkDecoder.hpp"
@@ -22,7 +20,6 @@
 #include "../application/ControlPlane/JsonResponseEncoder.hpp"
 #include "../application/ControlPlane/JsonUserNetworkListResponseEncoder.hpp"
 #include "../application/ControlPlane/SessionStore.hpp"
-#include "../application/ControlPlane/Endpoints/CreateNetworkAuthEndpoint.hpp"
 #include "../application/ControlPlane/Endpoints/CreateNetworkEndpoint.hpp"
 #include "../application/ControlPlane/Endpoints/CreatePeerEndpoint.hpp"
 #include "../application/ControlPlane/Endpoints/JoinNetworkEndpoint.hpp"
@@ -56,7 +53,6 @@ namespace vpsm::server::infrastructure {
               membershipStore_{},
               userService_{peerRepository_, networkRepository_, membershipStore_},
               router_{std::make_shared<application::ControlRouter>()},
-              health_{std::make_shared<application::HealthEndpoint>()},
               requestDecoder_{std::make_shared<application::JsonRequestDecoder>()},
               responseEncoder_{std::make_shared<application::JsonResponseEncoder>()},
               createPeerDecoder_{std::make_shared<application::JsonCreatePeerDecoder>()},
@@ -73,13 +69,11 @@ namespace vpsm::server::infrastructure {
               leaveNetworkResponseEncoder_{std::make_shared<application::JsonLeaveNetworkResponseEncoder>()},
               loginDecoder_{std::make_shared<application::JsonLoginDecoder>()},
               loginResponseEncoder_{std::make_shared<application::JsonLoginResponseEncoder>()},
-              dispatchEcho_{std::make_shared<application::DispatchEchoEndpoint>(*requestDecoder_, *responseEncoder_)},
               createPeer_{std::make_shared<application::endpoints::CreatePeerEndpoint>(userService_, *createPeerDecoder_, *createPeerResponseEncoder_)},
               createNetwork_{std::make_shared<application::endpoints::CreateNetworkEndpoint>(userService_, *createNetworkDecoder_, *createNetworkResponseEncoder_)},
               joinNetwork_{std::make_shared<application::endpoints::JoinNetworkEndpoint>(userService_, *joinNetworkDecoder_, *joinNetworkResponseEncoder_, "PUT")},
               leaveNetwork_{std::make_shared<application::endpoints::LeaveNetworkEndpoint>(userService_, *leaveNetworkDecoder_, *leaveNetworkResponseEncoder_, "DELETE")},
               login_{std::make_shared<application::endpoints::LoginEndpoint>(userService_, sessionStore_, *loginDecoder_, *loginResponseEncoder_)},
-              createNetworkAuth_{std::make_shared<application::endpoints::CreateNetworkAuthEndpoint>(userService_, *createNetworkAuthResponseEncoder_)},
               networkUserAdd_{std::make_shared<application::endpoints::NetworkUserAddEndpoint>(userService_, *networkUserAddResponseEncoder_)},
               userNetworkList_{std::make_shared<application::endpoints::UserNetworkListEndpoint>(userService_, *userNetworkListResponseEncoder_)},
               networkPeersList_{std::make_shared<application::endpoints::NetworkPeersListEndpoint>(userService_, *networkPeersListResponseEncoder_)},
@@ -116,11 +110,9 @@ namespace vpsm::server::infrastructure {
                 return sessionStore_.authenticate(sessionId, sessionKey);
             });
 
-            router_->addRoute("GET", "/health", health_);
-            router_->addRoute("POST", "/dispatch/echo", dispatchEcho_);
             router_->addRoute("POST", "/user/login", login_);
 
-            router_->addRoute("POST", "/network/create", createNetworkAuth_);
+            router_->addRoute("POST", "/network/create", createNetwork_);
             router_->addRoute("PUT", "/network/{id}/user-add", networkUserAdd_);
             router_->addRoute("GET", "/user/{id}/network-list", userNetworkList_);
             router_->addRoute("GET", "/network/{id}/peers-list", networkPeersList_);
@@ -131,9 +123,10 @@ namespace vpsm::server::infrastructure {
             router_->addRoute("DELETE", "/user/networks/{networkId}/members/{peerId}", leaveNetwork_);
 
             router_->addRoute("POST", "/user/create-peer", createPeer_);
-            router_->addRoute("POST", "/user/create-network", createNetwork_);
             router_->addRoute("POST", "/user/join-network", joinNetworkLegacy_);
             router_->addRoute("POST", "/user/leave-network", leaveNetworkLegacy_);
+
+
         }
 
         int start() {
@@ -176,7 +169,6 @@ namespace vpsm::server::infrastructure {
         application::UserService userService_;
 
         std::shared_ptr<application::ControlRouter> router_;
-        std::shared_ptr<application::HealthEndpoint> health_;
         std::shared_ptr<application::JsonRequestDecoder> requestDecoder_;
         std::shared_ptr<application::JsonResponseEncoder> responseEncoder_;
         std::shared_ptr<application::JsonCreatePeerDecoder> createPeerDecoder_;
@@ -194,13 +186,11 @@ namespace vpsm::server::infrastructure {
         application::SessionStore sessionStore_;
         std::shared_ptr<application::JsonLoginDecoder> loginDecoder_;
         std::shared_ptr<application::JsonLoginResponseEncoder> loginResponseEncoder_;
-        std::shared_ptr<application::DispatchEchoEndpoint> dispatchEcho_;
         std::shared_ptr<application::endpoints::CreatePeerEndpoint> createPeer_;
         std::shared_ptr<application::endpoints::CreateNetworkEndpoint> createNetwork_;
         std::shared_ptr<application::endpoints::JoinNetworkEndpoint> joinNetwork_;
         std::shared_ptr<application::endpoints::LeaveNetworkEndpoint> leaveNetwork_;
         std::shared_ptr<application::endpoints::LoginEndpoint> login_;
-        std::shared_ptr<application::endpoints::CreateNetworkAuthEndpoint> createNetworkAuth_;
         std::shared_ptr<application::endpoints::NetworkUserAddEndpoint> networkUserAdd_;
         std::shared_ptr<application::endpoints::UserNetworkListEndpoint> userNetworkList_;
         std::shared_ptr<application::endpoints::NetworkPeersListEndpoint> networkPeersList_;
