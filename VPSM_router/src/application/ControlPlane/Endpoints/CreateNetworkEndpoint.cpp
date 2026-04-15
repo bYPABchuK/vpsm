@@ -1,4 +1,5 @@
 #include "CreateNetworkEndpoint.hpp"
+#include "AuthPolicy.hpp"
 
 namespace vpsm::server::application::endpoints {
     ControlResponse CreateNetworkEndpoint::handle(const ControlRequest& request) {
@@ -9,6 +10,10 @@ namespace vpsm::server::application::endpoints {
         const auto dto = requestDecoder_.decode(request);
         if (!dto.has_value()) {
             return responseEncoder_.encode(dto::CreateNetworkResultDto{.ok = false, .status = 400, .error = "invalid_payload"});
+        }
+
+        if (!auth_policy::matchesAuthenticatedPeer(request, dto->ownerPeerId)) {
+            return responseEncoder_.encode(dto::CreateNetworkResultDto{.ok = false, .status = 403, .error = "forbidden"});
         }
 
         const auto networkId = userService_.createNetwork(dto->ownerPeerId, dto->name, dto->passwordHash);

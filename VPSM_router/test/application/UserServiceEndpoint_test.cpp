@@ -137,6 +137,7 @@ namespace {
             .path = "/user/networks",
             .headers = {{"Content-Type", "application/json"}},
             .body = bytes(R"({"ownerPeerId":7,"name":"n1","passwordHash":"ph"})"),
+            .authenticatedPeerId = 7,
         });
 
         EXPECT_EQ(response.status, 200);
@@ -156,6 +157,7 @@ namespace {
             .headers = {{"Content-Type", "application/json"}},
             .pathParams = {{"networkId", "9"}, {"peerId", "5"}},
             .body = bytes(R"({"passwordHash":"ph"})"),
+            .authenticatedPeerId = 5,
         };
 
         const auto response = endpoint.handle(req);
@@ -177,6 +179,7 @@ namespace {
             .headers = {{"Content-Type", "application/json"}},
             .pathParams = {{"networkId", "9"}, {"peerId", "5"}},
             .body = bytes("{}"),
+            .authenticatedPeerId = 5,
         };
 
         const auto response = endpoint.handle(req);

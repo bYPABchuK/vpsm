@@ -1,4 +1,5 @@
 #include "JoinNetworkEndpoint.hpp"
+#include "AuthPolicy.hpp"
 
 namespace vpsm::server::application::endpoints {
     ControlResponse JoinNetworkEndpoint::handle(const ControlRequest& request) {
@@ -9,6 +10,10 @@ namespace vpsm::server::application::endpoints {
         const auto dto = requestDecoder_.decode(request);
         if (!dto.has_value()) {
             return responseEncoder_.encode(dto::JoinNetworkResultDto{.ok = false, .status = 400, .error = "invalid_payload"});
+        }
+
+        if (!auth_policy::matchesAuthenticatedPeer(request, dto->peerId)) {
+            return responseEncoder_.encode(dto::JoinNetworkResultDto{.ok = false, .status = 403, .error = "forbidden"});
         }
 
         const auto vip = userService_.joinNetwork(dto->peerId, dto->networkId, dto->passwordHash);

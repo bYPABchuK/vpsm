@@ -31,6 +31,7 @@ add_executable(unit_tests
     src/application/ControlPlane/JsonCreateNetworkDecoder.cpp
     src/application/ControlPlane/JsonCreateNetworkAuthResponseEncoder.cpp
     src/application/ControlPlane/JsonCreateNetworkResponseEncoder.cpp
+    src/application/ControlPlane/JsonNetworkUserAddDecoder.cpp
     src/application/ControlPlane/JsonNetworkUserAddResponseEncoder.cpp
     src/application/ControlPlane/JsonUserNetworkListResponseEncoder.cpp
     src/application/ControlPlane/JsonNetworkPeersListResponseEncoder.cpp
@@ -104,6 +105,7 @@ add_executable(vpsm_router
     src/application/ControlPlane/JsonCreateNetworkDecoder.cpp
     src/application/ControlPlane/JsonCreateNetworkAuthResponseEncoder.cpp
     src/application/ControlPlane/JsonCreateNetworkResponseEncoder.cpp
+    src/application/ControlPlane/JsonNetworkUserAddDecoder.cpp
     src/application/ControlPlane/JsonNetworkUserAddResponseEncoder.cpp
     src/application/ControlPlane/JsonUserNetworkListResponseEncoder.cpp
     src/application/ControlPlane/JsonNetworkPeersListResponseEncoder.cpp
