@@ -34,6 +34,7 @@ add_executable(unit_tests
     src/application/ControlPlane/JsonNetworkUserAddDecoder.cpp
     src/application/ControlPlane/JsonNetworkUserAddResponseEncoder.cpp
     src/application/ControlPlane/JsonUserNetworkListResponseEncoder.cpp
+    src/application/ControlPlane/JsonUserNetworkPeersListResponseEncoder.cpp
     src/application/ControlPlane/JsonNetworkPeersListResponseEncoder.cpp
     src/application/ControlPlane/JsonJoinNetworkDecoder.cpp
     src/application/ControlPlane/JsonJoinNetworkResponseEncoder.cpp
@@ -49,6 +50,7 @@ add_executable(unit_tests
     src/application/ControlPlane/Endpoints/LoginEndpoint.cpp
     src/application/ControlPlane/Endpoints/NetworkUserAddEndpoint.cpp
     src/application/ControlPlane/Endpoints/UserNetworkListEndpoint.cpp
+    src/application/ControlPlane/Endpoints/UserNetworkPeersListEndpoint.cpp
     src/application/ControlPlane/Endpoints/NetworkPeersListEndpoint.cpp
     src/application/DTO/JsonDtoDecoder.cpp
     src/adapter/MembershipStore.cpp
@@ -108,6 +110,7 @@ add_executable(vpsm_router
     src/application/ControlPlane/JsonNetworkUserAddDecoder.cpp
     src/application/ControlPlane/JsonNetworkUserAddResponseEncoder.cpp
     src/application/ControlPlane/JsonUserNetworkListResponseEncoder.cpp
+    src/application/ControlPlane/JsonUserNetworkPeersListResponseEncoder.cpp
     src/application/ControlPlane/JsonNetworkPeersListResponseEncoder.cpp
     src/application/ControlPlane/JsonJoinNetworkDecoder.cpp
     src/application/ControlPlane/JsonJoinNetworkResponseEncoder.cpp
@@ -123,6 +126,7 @@ add_executable(vpsm_router
     src/application/ControlPlane/Endpoints/LoginEndpoint.cpp
     src/application/ControlPlane/Endpoints/NetworkUserAddEndpoint.cpp
     src/application/ControlPlane/Endpoints/UserNetworkListEndpoint.cpp
+    src/application/ControlPlane/Endpoints/UserNetworkPeersListEndpoint.cpp
     src/application/ControlPlane/Endpoints/NetworkPeersListEndpoint.cpp
     src/application/DTO/JsonDtoDecoder.cpp
     src/adapter/MembershipStore.cpp

@@ -112,6 +112,20 @@ namespace vpsm::server::application::dto {
         std::uint32_t vip = 0;
     };
 
+    struct UserNetworkWithPeersItemDto {
+        std::uint64_t id = 0;
+        std::string name;
+        std::uint64_t ownerPeerId = 0;
+        std::vector<NetworkPeerItemDto> peers;
+    };
+
+    struct UserNetworkPeersListResultDto {
+        bool ok = false;
+        std::uint16_t status = 400;
+        std::vector<UserNetworkWithPeersItemDto> networks;
+        std::optional<std::string> error;
+    };
+
     struct NetworkPeersListResultDto {
         bool ok = false;
         std::uint16_t status = 400;

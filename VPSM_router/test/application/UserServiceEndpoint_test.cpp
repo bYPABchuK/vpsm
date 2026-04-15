@@ -2,6 +2,7 @@
 #include "../../src/application/ControlPlane/Endpoints/CreateNetworkEndpoint.hpp"
 #include "../../src/application/ControlPlane/Endpoints/JoinNetworkEndpoint.hpp"
 #include "../../src/application/ControlPlane/Endpoints/LeaveNetworkEndpoint.hpp"
+#include "../../src/application/ControlPlane/Endpoints/UserNetworkPeersListEndpoint.hpp"
 #include "../../src/application/ControlPlane/JsonCreatePeerDecoder.hpp"
 #include "../../src/application/ControlPlane/JsonCreatePeerResponseEncoder.hpp"
 #include "../../src/application/ControlPlane/JsonCreateNetworkDecoder.hpp"
@@ -10,6 +11,7 @@
 #include "../../src/application/ControlPlane/JsonJoinNetworkResponseEncoder.hpp"
 #include "../../src/application/ControlPlane/JsonLeaveNetworkDecoder.hpp"
 #include "../../src/application/ControlPlane/JsonLeaveNetworkResponseEncoder.hpp"
+#include "../../src/application/ControlPlane/JsonUserNetworkPeersListResponseEncoder.hpp"
 
 #include <gtest/gtest.h>
 
@@ -21,6 +23,7 @@ namespace {
     using vpsm::server::application::endpoints::CreatePeerEndpoint;
     using vpsm::server::application::endpoints::JoinNetworkEndpoint;
     using vpsm::server::application::endpoints::LeaveNetworkEndpoint;
+    using vpsm::server::application::endpoints::UserNetworkPeersListEndpoint;
 
     class UserServiceFake final : public vpsm::server::port::IUserService {
     public:
@@ -67,8 +70,15 @@ namespace {
             return leaveNetworkResult;
         }
 
-        std::vector<vpsm::server::domain::VNetwork> listUserNetworks(std::uint64_t) const override { return {}; }
-        std::vector<vpsm::server::domain::Peer> listNetworkPeers(std::uint64_t) const override { return {}; }
+        mutable std::vector<vpsm::server::domain::VNetwork> userNetworks;
+        mutable std::vector<vpsm::server::domain::Peer> networkPeers;
+
+        std::vector<vpsm::server::domain::VNetwork> listUserNetworks(std::uint64_t) const override {
+            return userNetworks;
+        }
+        std::vector<vpsm::server::domain::Peer> listNetworkPeers(std::uint64_t) const override {
+            return networkPeers;
+        }
     };
 
     std::vector<std::uint8_t> bytes(const std::string& s) {
@@ -187,5 +197,49 @@ namespace {
         EXPECT_EQ(response.status, 200);
         EXPECT_EQ(service.lastLeavePeerId, 5u);
         EXPECT_EQ(service.lastLeaveNetworkId, 9u);
+    }
+
+    TEST(UserEndpointsTest, userNetworkPeersList_ValidRequest_ReturnsNetworksWithPeersTrue) {
+        UserServiceFake service;
+        vpsm::server::application::JsonUserNetworkPeersListResponseEncoder encoder;
+        UserNetworkPeersListEndpoint endpoint(service, encoder);
+
+        service.userNetworks.push_back(vpsm::server::domain::VNetwork{
+            .id = 9,
+            .name = "net-9",
+            .owner = vpsm::server::domain::Peer{.peerId = 5, .vip = 0},
+        });
+        service.networkPeers.push_back(vpsm::server::domain::Peer{.peerId = 5, .vip = 1001});
+        service.networkPeers.push_back(vpsm::server::domain::Peer{.peerId = 6, .vip = 1002});
+
+        const auto response = endpoint.handle(ControlRequest{
+            .method = "GET",
+            .path = "/user/5/network-peers-list",
+            .pathParams = {{"id", "5"}},
+            .authenticatedPeerId = 5,
+        });
+
+        EXPECT_EQ(response.status, 200);
+        EXPECT_EQ(response.contentType, "application/json");
+
+        const std::string body(response.body.begin(), response.body.end());
+        EXPECT_NE(body.find("\"ok\":true"), std::string::npos);
+        EXPECT_NE(body.find("\"networks\""), std::string::npos);
+        EXPECT_NE(body.find("\"peers\""), std::string::npos);
+    }
+
+    TEST(UserEndpointsTest, userNetworkPeersList_Forbidden_Returns403True) {
+        UserServiceFake service;
+        vpsm::server::application::JsonUserNetworkPeersListResponseEncoder encoder;
+        UserNetworkPeersListEndpoint endpoint(service, encoder);
+
+        const auto response = endpoint.handle(ControlRequest{
+            .method = "GET",
+            .path = "/user/5/network-peers-list",
+            .pathParams = {{"id", "5"}},
+            .authenticatedPeerId = 7,
+        });
+
+        EXPECT_EQ(response.status, 403);
     }
 }
