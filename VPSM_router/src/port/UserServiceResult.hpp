@@ -7,6 +7,7 @@ namespace vpsm::server::port {
     enum class UserServiceError {
         PeerNotFound,
         NetworkNotFound,
+        NetworkNameAlreadyExists,
         InvalidPassword,
         AlreadyMember,
         NotMember,

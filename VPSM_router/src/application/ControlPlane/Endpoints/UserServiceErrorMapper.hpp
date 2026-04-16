@@ -12,6 +12,8 @@ namespace vpsm::server::application::endpoints::user_service_error_mapper {
                 return "peer_not_found";
             case port::UserServiceError::NetworkNotFound:
                 return "network_not_found";
+            case port::UserServiceError::NetworkNameAlreadyExists:
+                return "network_name_already_exists";
             case port::UserServiceError::InvalidPassword:
                 return "invalid_password";
             case port::UserServiceError::AlreadyMember:
@@ -38,6 +40,8 @@ namespace vpsm::server::application::endpoints::user_service_error_mapper {
                 return 403;
             case port::UserServiceError::InternalError:
                 return 500;
+            case port::UserServiceError::NetworkNameAlreadyExists:
+                return 409;
             default:
                 return 400;
         }

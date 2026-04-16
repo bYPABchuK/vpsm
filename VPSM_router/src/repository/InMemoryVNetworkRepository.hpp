@@ -19,6 +19,7 @@ namespace vpsm::server::repository {
         std::optional<domain::VNetwork> getNetwork(std::uint64_t networkId) const override;
         std::vector<domain::VNetwork> listNetworks() const override;
         bool exists(std::uint64_t networkId) const override;
+        bool existsByName(const std::string& name) const override;
 
     private:
         mutable std::shared_mutex mutex_;

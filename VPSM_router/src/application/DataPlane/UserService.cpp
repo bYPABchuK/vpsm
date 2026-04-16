@@ -52,6 +52,10 @@ namespace vpsm::server::application {
             return port::UserServiceError::PeerNotFound;
         }
 
+        if (networkRepository_.existsByName(name)) {
+            return port::UserServiceError::NetworkNameAlreadyExists;
+        }
+
         const auto networkId = networkRepository_.createNetwork(ownerPeerId, name, passwordHash);
         if (!networkId.has_value()) {
             return port::UserServiceError::CreateFailed;

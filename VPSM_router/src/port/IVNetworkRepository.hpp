@@ -21,5 +21,6 @@ namespace vpsm::server::port {
         virtual std::vector<domain::VNetwork> listNetworks() const = 0;
 
         virtual bool exists(std::uint64_t networkId) const = 0;
+        virtual bool existsByName(const std::string& name) const = 0;
     };
 }

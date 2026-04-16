@@ -79,10 +79,16 @@ namespace {
             return it != existsByNetworkId.end() ? it->second : false;
         }
 
+        bool existsByName(const std::string& name) const override {
+            const auto it = existsByNetworkName.find(name);
+            return it != existsByNetworkName.end() ? it->second : false;
+        }
+
         std::optional<std::uint64_t> createNetworkResult = 10;
         bool deleteNetworkResult = true;
         mutable std::unordered_map<std::uint64_t, VNetwork> networksById;
         mutable std::unordered_map<std::uint64_t, bool> existsByNetworkId;
+        mutable std::unordered_map<std::string, bool> existsByNetworkName;
         std::uint64_t deletedNetworkId = 0;
     };
 
@@ -175,6 +181,21 @@ namespace {
 
         ASSERT_TRUE(std::holds_alternative<vpsm::server::port::UserServiceError>(ok));
         EXPECT_EQ(std::get<vpsm::server::port::UserServiceError>(ok), vpsm::server::port::UserServiceError::Forbidden);
+    }
+
+    TEST(UserServiceTest, createNetwork_duplicateName_NetworkNameAlreadyExistsError) {
+
+        PeerRepositoryFake peerRepo;
+        NetworkRepositoryFake networkRepo;
+        MembershipStoreFake membership;
+        peerRepo.existsByPeerId[1] = true;
+        networkRepo.existsByNetworkName["dup-net"] = true;
+        UserService service(peerRepo, networkRepo, membership);
+
+        const auto networkId = service.createNetwork(1, "dup-net", "p");
+
+        ASSERT_TRUE(std::holds_alternative<vpsm::server::port::UserServiceError>(networkId));
+        EXPECT_EQ(std::get<vpsm::server::port::UserServiceError>(networkId), vpsm::server::port::UserServiceError::NetworkNameAlreadyExists);
     }
 
     TEST(UserServiceTest, joinNetwork_neverniyParol_InvalidPasswordError) {

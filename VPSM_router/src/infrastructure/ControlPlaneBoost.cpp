@@ -124,14 +124,14 @@ namespace vpsm::server::infrastructure {
             router_->addRoute("GET", "/user/{id}/network-peers-list", userNetworkPeersList_);
             router_->addRoute("GET", "/network/{id}/peers-list", networkPeersList_);
 
-            router_->addRoute("POST", "/user/peers", createPeer_);
-            router_->addRoute("POST", "/user/networks", createNetwork_);
+//            router_->addRoute("POST", "/user/peers", createPeer_);
+//            router_->addRoute("POST", "/user/networks", createNetwork_);
             router_->addRoute("PUT", "/user/networks/{networkId}/members/{peerId}", joinNetwork_);
             router_->addRoute("DELETE", "/user/networks/{networkId}/members/{peerId}", leaveNetwork_);
 
-            router_->addRoute("POST", "/user/create-peer", createPeer_);
-            router_->addRoute("POST", "/user/join-network", joinNetworkLegacy_);
-            router_->addRoute("POST", "/user/leave-network", leaveNetworkLegacy_);
+//            router_->addRoute("POST", "/user/create-peer", createPeer_);
+//            router_->addRoute("POST", "/user/join-network", joinNetworkLegacy_);
+//            router_->addRoute("POST", "/user/leave-network", leaveNetworkLegacy_); ПОДЛЕЖИТ ЛИКВИДАЦИИ!!!
 
 
         }

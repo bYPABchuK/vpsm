@@ -155,6 +155,26 @@ namespace {
         EXPECT_EQ(service.lastNetworkName, "n1");
     }
 
+    TEST(UserEndpointsTest, createNetwork_DuplicateName_Returns409AndErrorTrue) {
+        UserServiceFake service;
+        service.createNetworkResult = vpsm::server::port::UserServiceError::NetworkNameAlreadyExists;
+        vpsm::server::application::JsonCreateNetworkDecoder decoder;
+        vpsm::server::application::JsonCreateNetworkResponseEncoder encoder;
+        CreateNetworkEndpoint endpoint(service, decoder, encoder);
+
+        const auto response = endpoint.handle(ControlRequest{
+            .method = "POST",
+            .path = "/user/networks",
+            .headers = {{"Content-Type", "application/json"}},
+            .body = bytes(R"({"ownerPeerId":7,"name":"dup-net","passwordHash":"ph"})"),
+            .authenticatedPeerId = 7,
+        });
+
+        EXPECT_EQ(response.status, 409);
+        const std::string body(response.body.begin(), response.body.end());
+        EXPECT_NE(body.find("\"network_name_already_exists\""), std::string::npos);
+    }
+
     TEST(UserEndpointsTest, joinNetwork_FromPathParams_UsesRestParamsTrue) {
         UserServiceFake service;
         vpsm::server::application::JsonJoinNetworkDecoder decoder;

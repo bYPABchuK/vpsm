@@ -55,4 +55,16 @@ namespace vpsm::server::repository {
         std::shared_lock lock(mutex_);
         return networks_.find(networkId) != networks_.end();
     }
+
+    bool InMemoryVNetworkRepository::existsByName(const std::string& name) const {
+        std::shared_lock lock(mutex_);
+
+        for (const auto& [_, network] : networks_) {
+            if (network.name == name) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }
