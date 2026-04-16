@@ -1,5 +1,6 @@
 #include "JoinNetworkEndpoint.hpp"
 #include "AuthPolicy.hpp"
+#include "UserServiceErrorMapper.hpp"
 
 namespace vpsm::server::application::endpoints {
     ControlResponse JoinNetworkEndpoint::handle(const ControlRequest& request) {
@@ -17,10 +18,15 @@ namespace vpsm::server::application::endpoints {
         }
 
         const auto vip = userService_.joinNetwork(dto->peerId, dto->networkId, dto->passwordHash);
-        if (!vip.has_value()) {
-            return responseEncoder_.encode(dto::JoinNetworkResultDto{.ok = false, .status = 400});
+        if (std::holds_alternative<port::UserServiceError>(vip)) {
+            const auto error = std::get<port::UserServiceError>(vip);
+            return responseEncoder_.encode(dto::JoinNetworkResultDto{
+                .ok = false,
+                .status = user_service_error_mapper::toStatus(error),
+                .error = user_service_error_mapper::toErrorString(error),
+            });
         }
 
-        return responseEncoder_.encode(dto::JoinNetworkResultDto{.ok = true, .status = 200, .vip = *vip});
+        return responseEncoder_.encode(dto::JoinNetworkResultDto{.ok = true, .status = 200, .vip = std::get<port::JoinNetworkSuccess>(vip).vip});
     }
 }

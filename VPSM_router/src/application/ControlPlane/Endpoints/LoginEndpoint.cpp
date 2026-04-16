@@ -1,4 +1,5 @@
 #include "LoginEndpoint.hpp"
+#include "UserServiceErrorMapper.hpp"
 
 namespace vpsm::server::application::endpoints {
     ControlResponse LoginEndpoint::handle(const ControlRequest& request) {
@@ -17,10 +18,17 @@ namespace vpsm::server::application::endpoints {
 
         std::optional<std::uint64_t> peerId = userService_.findPeerIdByNickname(dto->nickname);
         if (!peerId.has_value()) {
-            peerId = userService_.createPeer(dto->nickname, dto->passwordHash);
-            if (!peerId.has_value()) {
-                return responseEncoder_.encode(dto::LoginResultDto{.ok = false, .status = 400, .error = "create_failed"});
+            const auto createResult = userService_.createPeer(dto->nickname, dto->passwordHash);
+            if (std::holds_alternative<port::UserServiceError>(createResult)) {
+                const auto error = std::get<port::UserServiceError>(createResult);
+                return responseEncoder_.encode(dto::LoginResultDto{
+                    .ok = false,
+                    .status = user_service_error_mapper::toStatus(error),
+                    .error = user_service_error_mapper::toErrorString(error),
+                });
             }
+
+            peerId = std::get<port::CreatePeerSuccess>(createResult).peerId;
         } else {
             if (!userService_.verifyPeerPassword(*peerId, dto->passwordHash)) {
                 return responseEncoder_.encode(dto::LoginResultDto{.ok = false, .status = 403, .error = "invalid_password"});

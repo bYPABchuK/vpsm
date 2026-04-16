@@ -1,4 +1,5 @@
 #include "CreatePeerEndpoint.hpp"
+#include "UserServiceErrorMapper.hpp"
 
 namespace vpsm::server::application::endpoints {
     ControlResponse CreatePeerEndpoint::handle(const ControlRequest& request) {
@@ -12,10 +13,15 @@ namespace vpsm::server::application::endpoints {
         }
 
         const auto peerId = userService_.createPeer(dto->nickname, dto->passwordHash);
-        if (!peerId.has_value()) {
-            return responseEncoder_.encode(dto::CreatePeerResultDto{.ok = false, .status = 400});
+        if (std::holds_alternative<port::UserServiceError>(peerId)) {
+            const auto error = std::get<port::UserServiceError>(peerId);
+            return responseEncoder_.encode(dto::CreatePeerResultDto{
+                .ok = false,
+                .status = user_service_error_mapper::toStatus(error),
+                .error = user_service_error_mapper::toErrorString(error),
+            });
         }
 
-        return responseEncoder_.encode(dto::CreatePeerResultDto{.ok = true, .status = 200, .peerId = *peerId});
+        return responseEncoder_.encode(dto::CreatePeerResultDto{.ok = true, .status = 200, .peerId = std::get<port::CreatePeerSuccess>(peerId).peerId});
     }
 }

@@ -14,7 +14,7 @@ namespace vpsm::server::application {
             port::IMembershipStore& membershipStore
         );
 
-        std::optional<std::uint64_t> createPeer(
+        port::CreatePeerResult createPeer(
             const std::string& nickname,
             const std::string& passwordHash
         ) override;
@@ -22,26 +22,26 @@ namespace vpsm::server::application {
         std::optional<std::uint64_t> findPeerIdByNickname(const std::string& nickname) const override;
         bool verifyPeerPassword(std::uint64_t peerId, const std::string& passwordHash) const override;
 
-        bool deletePeer(std::uint64_t peerId) override;
+        port::ActionResult deletePeer(std::uint64_t peerId) override;
 
-        std::optional<std::uint64_t> createNetwork(
+        port::CreateNetworkResult createNetwork(
             std::uint64_t ownerPeerId,
             const std::string& name,
             const std::string& passwordHash
         ) override;
 
-        bool deleteNetwork(
+        port::ActionResult deleteNetwork(
             std::uint64_t requesterPeerId,
             std::uint64_t networkId
         ) override;
 
-        std::optional<std::uint32_t> joinNetwork(
+        port::JoinNetworkResult joinNetwork(
             std::uint64_t peerId,
             std::uint64_t networkId,
             const std::string& passwordHash
         ) override;
 
-        bool leaveNetwork(
+        port::ActionResult leaveNetwork(
             std::uint64_t peerId,
             std::uint64_t networkId
         ) override;

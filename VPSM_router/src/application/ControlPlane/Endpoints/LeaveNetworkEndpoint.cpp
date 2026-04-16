@@ -1,5 +1,6 @@
 #include "LeaveNetworkEndpoint.hpp"
 #include "AuthPolicy.hpp"
+#include "UserServiceErrorMapper.hpp"
 
 namespace vpsm::server::application::endpoints {
     ControlResponse LeaveNetworkEndpoint::handle(const ControlRequest& request) {
@@ -17,6 +18,15 @@ namespace vpsm::server::application::endpoints {
         }
 
         const auto ok = userService_.leaveNetwork(dto->peerId, dto->networkId);
-        return responseEncoder_.encode(dto::LeaveNetworkResultDto{.ok = ok, .status = 200});
+        if (std::holds_alternative<port::UserServiceError>(ok)) {
+            const auto error = std::get<port::UserServiceError>(ok);
+            return responseEncoder_.encode(dto::LeaveNetworkResultDto{
+                .ok = false,
+                .status = user_service_error_mapper::toStatus(error),
+                .error = user_service_error_mapper::toErrorString(error),
+            });
+        }
+
+        return responseEncoder_.encode(dto::LeaveNetworkResultDto{.ok = true, .status = 200});
     }
 }

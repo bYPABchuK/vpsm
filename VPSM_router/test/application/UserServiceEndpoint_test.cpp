@@ -27,20 +27,20 @@ namespace {
 
     class UserServiceFake final : public vpsm::server::port::IUserService {
     public:
-        std::optional<std::uint64_t> createPeer(const std::string& nickname, const std::string& passwordHash) override {
+        vpsm::server::port::CreatePeerResult createPeer(const std::string& nickname, const std::string& passwordHash) override {
             lastNickname = nickname;
             lastPassword = passwordHash;
             return createPeerResult;
         }
-        bool deletePeer(std::uint64_t) override { return false; }
-        bool deleteNetwork(std::uint64_t, std::uint64_t) override { return false; }
+        vpsm::server::port::ActionResult deletePeer(std::uint64_t) override { return vpsm::server::port::UserServiceError::DeleteFailed; }
+        vpsm::server::port::ActionResult deleteNetwork(std::uint64_t, std::uint64_t) override { return vpsm::server::port::UserServiceError::DeleteFailed; }
         std::optional<std::uint64_t> findPeerIdByNickname(const std::string&) const override { return std::nullopt; }
         bool verifyPeerPassword(std::uint64_t, const std::string&) const override { return true; }
 
-        std::optional<std::uint64_t> createPeerResult = 42;
-        std::optional<std::uint64_t> createNetworkResult = 77;
-        std::optional<std::uint32_t> joinNetworkResult = 111;
-        bool leaveNetworkResult = true;
+        vpsm::server::port::CreatePeerResult createPeerResult = vpsm::server::port::CreatePeerSuccess{.peerId = 42};
+        vpsm::server::port::CreateNetworkResult createNetworkResult = vpsm::server::port::CreateNetworkSuccess{.networkId = 77};
+        vpsm::server::port::JoinNetworkResult joinNetworkResult = vpsm::server::port::JoinNetworkSuccess{.vip = 111, .alreadyExists = false};
+        vpsm::server::port::ActionResult leaveNetworkResult = vpsm::server::port::ActionSuccess{};
         std::string lastNickname;
         std::string lastPassword;
         std::uint64_t lastOwnerPeerId = 0;
@@ -50,21 +50,21 @@ namespace {
         std::uint64_t lastLeavePeerId = 0;
         std::uint64_t lastLeaveNetworkId = 0;
 
-        std::optional<std::uint64_t> createNetwork(std::uint64_t ownerPeerId, const std::string& name, const std::string& passwordHash) override {
+        vpsm::server::port::CreateNetworkResult createNetwork(std::uint64_t ownerPeerId, const std::string& name, const std::string& passwordHash) override {
             lastOwnerPeerId = ownerPeerId;
             lastNetworkName = name;
             lastPassword = passwordHash;
             return createNetworkResult;
         }
 
-        std::optional<std::uint32_t> joinNetwork(std::uint64_t peerId, std::uint64_t networkId, const std::string& passwordHash) override {
+        vpsm::server::port::JoinNetworkResult joinNetwork(std::uint64_t peerId, std::uint64_t networkId, const std::string& passwordHash) override {
             lastJoinPeerId = peerId;
             lastJoinNetworkId = networkId;
             lastPassword = passwordHash;
             return joinNetworkResult;
         }
 
-        bool leaveNetwork(std::uint64_t peerId, std::uint64_t networkId) override {
+        vpsm::server::port::ActionResult leaveNetwork(std::uint64_t peerId, std::uint64_t networkId) override {
             lastLeavePeerId = peerId;
             lastLeaveNetworkId = networkId;
             return leaveNetworkResult;

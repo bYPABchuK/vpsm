@@ -10,11 +10,16 @@ namespace vpsm::server::application {
           networkRepository_(networkRepository),
           membershipStore_(membershipStore) {}
 
-    std::optional<std::uint64_t> UserService::createPeer(
+    port::CreatePeerResult UserService::createPeer(
         const std::string& nickname,
         const std::string& passwordHash
     ) {
-        return peerRepository_.createPeer(nickname, passwordHash);
+        const auto peerId = peerRepository_.createPeer(nickname, passwordHash);
+        if (!peerId.has_value()) {
+            return port::UserServiceError::CreateFailed;
+        }
+
+        return port::CreatePeerSuccess{.peerId = *peerId};
     }
 
     std::optional<std::uint64_t> UserService::findPeerIdByNickname(const std::string& nickname) const {
@@ -26,84 +31,110 @@ namespace vpsm::server::application {
         return stored.has_value() && *stored == passwordHash;
     }
 
-    bool UserService::deletePeer(std::uint64_t peerId) {
+    port::ActionResult UserService::deletePeer(std::uint64_t peerId) {
         if (!peerRepository_.exists(peerId)) {
-            return false;
+            return port::UserServiceError::PeerNotFound;
         }
 
-        return peerRepository_.deletePeer(peerId);
+        if (!peerRepository_.deletePeer(peerId)) {
+            return port::UserServiceError::DeleteFailed;
+        }
+
+        return port::ActionSuccess{};
     }
 
-    std::optional<std::uint64_t> UserService::createNetwork(
+    port::CreateNetworkResult UserService::createNetwork(
         std::uint64_t ownerPeerId,
         const std::string& name,
         const std::string& passwordHash
     ) {
         if (!peerRepository_.exists(ownerPeerId)) {
-            return std::nullopt;
+            return port::UserServiceError::PeerNotFound;
         }
 
-        return networkRepository_.createNetwork(ownerPeerId, name, passwordHash);
+        const auto networkId = networkRepository_.createNetwork(ownerPeerId, name, passwordHash);
+        if (!networkId.has_value()) {
+            return port::UserServiceError::CreateFailed;
+        }
+
+        return port::CreateNetworkSuccess{.networkId = *networkId};
     }
 
-    bool UserService::deleteNetwork(
+    port::ActionResult UserService::deleteNetwork(
         std::uint64_t requesterPeerId,
         std::uint64_t networkId
     ) {
         auto network = networkRepository_.getNetwork(networkId);
         if (!network.has_value()) {
-            return false;
+            return port::UserServiceError::NetworkNotFound;
         }
 
         if (network->owner.peerId != requesterPeerId) {
-            return false;
+            return port::UserServiceError::Forbidden;
         }
 
-        return networkRepository_.deleteNetwork(networkId);
+        if (!networkRepository_.deleteNetwork(networkId)) {
+            return port::UserServiceError::DeleteFailed;
+        }
+
+        return port::ActionSuccess{};
     }
 
-    std::optional<std::uint32_t> UserService::joinNetwork(
+    port::JoinNetworkResult UserService::joinNetwork(
         std::uint64_t peerId,
         std::uint64_t networkId,
         const std::string& passwordHash
     ) {
         if (!peerRepository_.exists(peerId)) {
-            return std::nullopt;
+            return port::UserServiceError::PeerNotFound;
         }
 
         auto network = networkRepository_.getNetwork(networkId);
         if (!network.has_value()) {
-            return std::nullopt;
+            return port::UserServiceError::NetworkNotFound;
         }
 
         if (network->password_hash != passwordHash) {
-            return std::nullopt;
+            return port::UserServiceError::InvalidPassword;
         }
 
         if (membershipStore_.hasPeer(networkId, peerId)) {
-            return membershipStore_.resolveVip(networkId, peerId);
+            const auto vip = membershipStore_.resolveVip(networkId, peerId);
+            if (!vip.has_value()) {
+                return port::UserServiceError::InternalError;
+            }
+            return port::JoinNetworkSuccess{.vip = *vip, .alreadyExists = true};
         }
 
-        return membershipStore_.allocateVip(networkId, peerId);
+        const auto vip = membershipStore_.allocateVip(networkId, peerId);
+        if (!vip.has_value()) {
+            return port::UserServiceError::CreateFailed;
+        }
+
+        return port::JoinNetworkSuccess{.vip = *vip, .alreadyExists = false};
     }
 
-    bool UserService::leaveNetwork(
+    port::ActionResult UserService::leaveNetwork(
         std::uint64_t peerId,
         std::uint64_t networkId
     ) {
         if (!peerRepository_.exists(peerId)) {
-            return false;
+            return port::UserServiceError::PeerNotFound;
         }
 
         if (!networkRepository_.exists(networkId)) {
-            return false;
+            return port::UserServiceError::NetworkNotFound;
         }
 
         if (!membershipStore_.hasPeer(networkId, peerId)) {
-            return false;
+            return port::UserServiceError::NotMember;
         }
 
-        return membershipStore_.releaseVip(networkId, peerId);
+        if (!membershipStore_.releaseVip(networkId, peerId)) {
+            return port::UserServiceError::DeleteFailed;
+        }
+
+        return port::ActionSuccess{};
     }
 
     std::vector<domain::VNetwork> UserService::listUserNetworks(std::uint64_t peerId) const {

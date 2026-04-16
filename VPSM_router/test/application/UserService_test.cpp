@@ -1,4 +1,5 @@
 #include "../../src/application/DataPlane/UserService.hpp"
+#include "../../src/port/UserServiceResult.hpp"
 
 #include <gtest/gtest.h>
 
@@ -148,7 +149,7 @@ namespace {
         return net;
     }
 
-    TEST(UserServiceTest, createNetwork_ownerNeSushestvuet_Nullopt) {
+    TEST(UserServiceTest, createNetwork_ownerNeSushestvuet_PeerNotFoundError) {
 
         PeerRepositoryFake peerRepo;
         NetworkRepositoryFake networkRepo;
@@ -158,10 +159,11 @@ namespace {
 
         const auto networkId = service.createNetwork(1, "n", "p");
 
-        EXPECT_FALSE(networkId.has_value());
+        ASSERT_TRUE(std::holds_alternative<vpsm::server::port::UserServiceError>(networkId));
+        EXPECT_EQ(std::get<vpsm::server::port::UserServiceError>(networkId), vpsm::server::port::UserServiceError::PeerNotFound);
     }
 
-    TEST(UserServiceTest, deleteNetwork_requesterNeOwner_False) {
+    TEST(UserServiceTest, deleteNetwork_requesterNeOwner_ForbiddenError) {
 
         PeerRepositoryFake peerRepo;
         NetworkRepositoryFake networkRepo;
@@ -169,12 +171,13 @@ namespace {
         networkRepo.networksById.emplace(42, makeNetwork(42, 100, "pass"));
         UserService service(peerRepo, networkRepo, membership);
 
-        const bool ok = service.deleteNetwork(200, 42);
+        const auto ok = service.deleteNetwork(200, 42);
 
-        EXPECT_FALSE(ok);
+        ASSERT_TRUE(std::holds_alternative<vpsm::server::port::UserServiceError>(ok));
+        EXPECT_EQ(std::get<vpsm::server::port::UserServiceError>(ok), vpsm::server::port::UserServiceError::Forbidden);
     }
 
-    TEST(UserServiceTest, joinNetwork_neverniyParol_Nullopt) {
+    TEST(UserServiceTest, joinNetwork_neverniyParol_InvalidPasswordError) {
 
         PeerRepositoryFake peerRepo;
         NetworkRepositoryFake networkRepo;
@@ -185,7 +188,8 @@ namespace {
 
         const auto vip = service.joinNetwork(9, 5, "wrong");
 
-        EXPECT_FALSE(vip.has_value());
+        ASSERT_TRUE(std::holds_alternative<vpsm::server::port::UserServiceError>(vip));
+        EXPECT_EQ(std::get<vpsm::server::port::UserServiceError>(vip), vpsm::server::port::UserServiceError::InvalidPassword);
     }
 
     TEST(UserServiceTest, joinNetwork_peerUzheVSeti_SushestvuyushiyVip) {
@@ -202,12 +206,12 @@ namespace {
 
         const auto vip = service.joinNetwork(9, 5, "pass");
 
-        ASSERT_TRUE(vip.has_value());
-        EXPECT_EQ(*vip, 777u);
+        ASSERT_TRUE(std::holds_alternative<vpsm::server::port::JoinNetworkSuccess>(vip));
+        EXPECT_EQ(std::get<vpsm::server::port::JoinNetworkSuccess>(vip).vip, 777u);
         EXPECT_EQ(membership.allocateVipCalls, 0);
     }
 
-    TEST(UserServiceTest, leaveNetwork_peerNeSushestvuet_False) {
+    TEST(UserServiceTest, leaveNetwork_peerNeSushestvuet_PeerNotFoundError) {
 
         PeerRepositoryFake peerRepo;
         NetworkRepositoryFake networkRepo;
@@ -216,9 +220,10 @@ namespace {
         networkRepo.existsByNetworkId[1] = true;
         UserService service(peerRepo, networkRepo, membership);
 
-        const bool ok = service.leaveNetwork(11, 1);
+        const auto ok = service.leaveNetwork(11, 1);
 
-        EXPECT_FALSE(ok);
+        ASSERT_TRUE(std::holds_alternative<vpsm::server::port::UserServiceError>(ok));
+        EXPECT_EQ(std::get<vpsm::server::port::UserServiceError>(ok), vpsm::server::port::UserServiceError::PeerNotFound);
     }
 
     TEST(UserServiceTest, leaveNetwork_uspeshniyVihod_True) {
@@ -233,9 +238,9 @@ namespace {
         membership.releaseVipResult = true;
         UserService service(peerRepo, networkRepo, membership);
 
-        const bool ok = service.leaveNetwork(11, 1);
+        const auto ok = service.leaveNetwork(11, 1);
 
-        EXPECT_TRUE(ok);
+        EXPECT_TRUE(std::holds_alternative<vpsm::server::port::ActionSuccess>(ok));
         EXPECT_EQ(membership.releaseVipCalls, 1);
         EXPECT_EQ(membership.lastNetworkId, 1u);
         EXPECT_EQ(membership.lastPeerId, 11u);

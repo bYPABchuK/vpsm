@@ -1,5 +1,6 @@
 #include "CreateNetworkEndpoint.hpp"
 #include "AuthPolicy.hpp"
+#include "UserServiceErrorMapper.hpp"
 
 namespace vpsm::server::application::endpoints {
     ControlResponse CreateNetworkEndpoint::handle(const ControlRequest& request) {
@@ -17,10 +18,15 @@ namespace vpsm::server::application::endpoints {
         }
 
         const auto networkId = userService_.createNetwork(dto->ownerPeerId, dto->name, dto->passwordHash);
-        if (!networkId.has_value()) {
-            return responseEncoder_.encode(dto::CreateNetworkResultDto{.ok = false, .status = 400});
+        if (std::holds_alternative<port::UserServiceError>(networkId)) {
+            const auto error = std::get<port::UserServiceError>(networkId);
+            return responseEncoder_.encode(dto::CreateNetworkResultDto{
+                .ok = false,
+                .status = user_service_error_mapper::toStatus(error),
+                .error = user_service_error_mapper::toErrorString(error),
+            });
         }
 
-        return responseEncoder_.encode(dto::CreateNetworkResultDto{.ok = true, .status = 200, .networkId = *networkId});
+        return responseEncoder_.encode(dto::CreateNetworkResultDto{.ok = true, .status = 200, .networkId = std::get<port::CreateNetworkSuccess>(networkId).networkId});
     }
 }
