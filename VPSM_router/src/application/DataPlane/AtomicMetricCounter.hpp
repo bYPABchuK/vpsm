@@ -7,6 +7,7 @@ namespace vpsm::server::application {
     class AtomicMetricCounter : public port::IMetricCounter {
         public:
         void routeActionCount(domain::RouteAction action) override;
+        void usersOnlineCount(domain::RouteAction action) override;
 
         
         domain::MetricsSnapshot snapshotAndReset() override;
@@ -20,6 +21,10 @@ namespace vpsm::server::application {
         std::atomic<std::uint64_t> packetsReceived_{0};
         std::atomic<std::uint64_t> packetsForwarded_{0};
         std::atomic<std::uint64_t> packetsDropped_{0};
+        std::atomic<std::uint64_t> packetsDroppedParse_{0};
+        std::atomic<std::uint64_t> packetsDroppedAuth_{0};
+        std::atomic<std::uint64_t> packetsDroppedMembership_{0};
+        std::atomic<std::uint64_t> packetsDroppedNoEndpoint_{0};
         std::atomic<std::uint64_t> packetsResponded_{0};
 
         std::atomic<std::uint64_t> usersOnline_{0};

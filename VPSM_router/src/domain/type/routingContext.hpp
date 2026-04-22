@@ -2,6 +2,7 @@
 
 #include "../model/packetIn.hpp"
 #include "../model/headerV2.hpp"
+#include "peerEndpoint.hpp"
 #include "routeActions.hpp"
 
 #include <optional>
@@ -13,6 +14,7 @@ namespace vpsm::server::domain {
 
         std::optional<std::uint64_t> srcPeerId;
         std::optional<std::uint64_t> dstPeerId;
+        std::optional<PeerEndpoint> dstEndpoint;
 
         RouteAction action = Drop{};
         bool stop = false;

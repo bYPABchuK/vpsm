@@ -18,6 +18,7 @@ add_executable(unit_tests
     src/application/DataPlane/PacketParserV2.cpp
     src/application/DataPlane/AuthServiceV2.cpp
     src/application/DataPlane/RoutingService.cpp
+    src/application/DataPlane/LogRoutingService.cpp
     src/application/DataPlane/UserService.cpp
     src/application/DataPlane/AtomicMetricCounter.cpp
     src/application/DataPlane/MetricService.cpp
@@ -54,6 +55,7 @@ add_executable(unit_tests
     src/application/ControlPlane/Endpoints/NetworkPeersListEndpoint.cpp
     src/application/DTO/JsonDtoDecoder.cpp
     src/adapter/MembershipStore.cpp
+    src/adapter/PeerEndpointRegistry.cpp
     src/adapter/FileMetricsSink.cpp
     src/adapter/boost/ControlHttpBoost.cpp
     src/infrastructure/ControlPlaneBoost.cpp
@@ -63,6 +65,7 @@ add_executable(unit_tests
     test/main.cpp
     test/application/AtomicMetricCounter_test.cpp
     test/application/MetricService_test.cpp
+    test/application/LogRoutingService_test.cpp
     test/application/PacketParser_test.cpp
     test/application/PacketParserV2_test.cpp
     test/application/AuthServiceV2_test.cpp
@@ -71,6 +74,7 @@ add_executable(unit_tests
     test/application/RoutingService_test.cpp
     test/application/UserService_test.cpp
     test/application/VipAllocator_test.cpp
+    test/application/SharedMembershipIntegration_test.cpp
     test/adapter/FileMetricsSink_test.cpp
     test/adapter/MembershipStore_test.cpp
 )
@@ -94,6 +98,7 @@ add_executable(vpsm_router
     src/application/DataPlane/PacketParserV2.cpp
     src/application/DataPlane/AuthServiceV2.cpp
     src/application/DataPlane/RoutingService.cpp
+    src/application/DataPlane/LogRoutingService.cpp
     src/application/DataPlane/UserService.cpp
     src/application/DataPlane/AtomicMetricCounter.cpp
     src/application/DataPlane/MetricService.cpp
@@ -130,6 +135,7 @@ add_executable(vpsm_router
     src/application/ControlPlane/Endpoints/NetworkPeersListEndpoint.cpp
     src/application/DTO/JsonDtoDecoder.cpp
     src/adapter/MembershipStore.cpp
+    src/adapter/PeerEndpointRegistry.cpp
     src/adapter/FileMetricsSink.cpp
     src/adapter/boost/ControlHttpBoost.cpp
     src/adapter/boost/UdpGatewayBoost.cpp

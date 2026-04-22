@@ -46,15 +46,30 @@
 #include <vector>
 
 namespace vpsm::server::infrastructure {
+    namespace {
+        std::shared_ptr<port::IMembershipStore> ensureMembershipStore(
+            std::shared_ptr<port::IMembershipStore> membershipStore
+        ) {
+            if (!membershipStore) {
+                membershipStore = std::make_shared<adapter::MembershipRegistry>();
+            }
+            return membershipStore;
+        }
+    }
+
     class ControlPlaneBoost::Impl {
     public:
-        Impl(std::uint16_t httpPort, std::uint16_t workerNum)
+        Impl(
+            std::uint16_t httpPort,
+            std::uint16_t workerNum,
+            std::shared_ptr<port::IMembershipStore> membershipStore
+        )
             : io_{},
               workGuard_{boost::asio::make_work_guard(io_)},
               peerRepository_{},
               networkRepository_{},
-              membershipStore_{},
-              userService_{peerRepository_, networkRepository_, membershipStore_},
+              membershipStore_{ensureMembershipStore(std::move(membershipStore))},
+              userService_{peerRepository_, networkRepository_, *membershipStore_},
               router_{std::make_shared<application::ControlRouter>()},
               requestDecoder_{std::make_shared<application::JsonRequestDecoder>()},
               responseEncoder_{std::make_shared<application::JsonResponseEncoder>()},
@@ -172,7 +187,7 @@ namespace vpsm::server::infrastructure {
 
         repository::InMemoryPeerRepository peerRepository_;
         repository::InMemoryVNetworkRepository networkRepository_;
-        adapter::MembershipRegistry membershipStore_;
+        std::shared_ptr<port::IMembershipStore> membershipStore_;
         application::UserService userService_;
 
         std::shared_ptr<application::ControlRouter> router_;
@@ -213,8 +228,12 @@ namespace vpsm::server::infrastructure {
         bool started_ = false;
     };
 
-    ControlPlaneBoost::ControlPlaneBoost(std::uint16_t httpPort, std::uint16_t workerNum)
-        : impl_(new Impl(httpPort, workerNum)) {}
+    ControlPlaneBoost::ControlPlaneBoost(
+        std::uint16_t httpPort,
+        std::uint16_t workerNum,
+        std::shared_ptr<port::IMembershipStore> membershipStore
+    )
+        : impl_(new Impl(httpPort, workerNum, std::move(membershipStore))) {}
 
     ControlPlaneBoost::~ControlPlaneBoost() {
         if (impl_ != nullptr) {

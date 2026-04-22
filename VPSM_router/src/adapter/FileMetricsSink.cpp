@@ -21,10 +21,14 @@ namespace vpsm::server::adapter {
         tmp += ".tmp";
 
         std::string payload;
-        payload.reserve(160);
+        payload.reserve(320);
         payload += "packets_received ";  payload += std::to_string(s.packetsReceived);  payload += '\n';
         payload += "packets_forwarded "; payload += std::to_string(s.packetsForwarded); payload += '\n';
         payload += "packets_dropped ";   payload += std::to_string(s.packetsDropped);   payload += '\n';
+        payload += "packets_dropped_parse "; payload += std::to_string(s.packetsDroppedParse); payload += '\n';
+        payload += "packets_dropped_auth "; payload += std::to_string(s.packetsDroppedAuth); payload += '\n';
+        payload += "packets_dropped_membership "; payload += std::to_string(s.packetsDroppedMembership); payload += '\n';
+        payload += "packets_dropped_no_endpoint "; payload += std::to_string(s.packetsDroppedNoEndpoint); payload += '\n';
         payload += "packets_responded "; payload += std::to_string(s.packetsResponded); payload += '\n';
         payload += "users_online ";      payload += std::to_string(s.usersOnline);      payload += '\n';
 

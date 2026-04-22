@@ -9,12 +9,12 @@ namespace vpsm::server::application {
             return std::nullopt;
         }
 
-        const auto sessionIt = highestSeqBySession_.find(outer->sessionId);
-        if (sessionIt == highestSeqBySession_.end()) {
+        const auto sessionIt = sessionStateById_.find(outer->sessionId);
+        if (sessionIt == sessionStateById_.end()) {
             return std::nullopt;
         }
 
-        if (outer->seq <= sessionIt->second) {
+        if (outer->seq <= sessionIt->second.highestSeq) {
             return std::nullopt;
         }
 
@@ -28,11 +28,12 @@ namespace vpsm::server::application {
             return std::nullopt;
         }
 
-        sessionIt->second = outer->seq;
+        sessionIt->second.highestSeq = outer->seq;
 
         return domain::AuthResultV2{
             .outer = *outer,
             .inner = *inner,
+            .authenticatedPeerId = sessionIt->second.peerId,
         };
     }
 }

@@ -46,8 +46,8 @@ namespace {
     }
 
     TEST(AuthServiceV2Test, verifyAndDecrypt_ValidPacket_ResultPresentTrue) {
-        std::unordered_map<std::uint64_t, std::uint64_t> sessions;
-        sessions.emplace(123u, 1u);
+        std::unordered_map<std::uint64_t, vpsm::server::domain::SessionAuthStateV2> sessions;
+        sessions.emplace(123u, vpsm::server::domain::SessionAuthStateV2{.peerId = 42u, .highestSeq = 1u});
         AuthServiceV2 auth(sessions);
 
         auto raw = makePacket(2, 123u, 2u, 0, 10, 100, 200);
@@ -64,10 +64,12 @@ namespace {
         EXPECT_EQ(result->outer.sessionId, 123u);
         EXPECT_EQ(result->outer.seq, 2u);
         EXPECT_EQ(result->inner.vNetworkId, 10u);
+        ASSERT_TRUE(result->authenticatedPeerId.has_value());
+        EXPECT_EQ(*result->authenticatedPeerId, 42u);
     }
 
     TEST(AuthServiceV2Test, verifyAndDecrypt_UnknownSession_NulloptTrue) {
-        std::unordered_map<std::uint64_t, std::uint64_t> sessions;
+        std::unordered_map<std::uint64_t, vpsm::server::domain::SessionAuthStateV2> sessions;
         AuthServiceV2 auth(sessions);
 
         auto raw = makePacket(2, 555u, 2u, 0, 10, 100, 200);
@@ -83,8 +85,8 @@ namespace {
     }
 
     TEST(AuthServiceV2Test, verifyAndDecrypt_ReplayDetected_NulloptTrue) {
-        std::unordered_map<std::uint64_t, std::uint64_t> sessions;
-        sessions.emplace(777u, 9u);
+        std::unordered_map<std::uint64_t, vpsm::server::domain::SessionAuthStateV2> sessions;
+        sessions.emplace(777u, vpsm::server::domain::SessionAuthStateV2{.peerId = 77u, .highestSeq = 9u});
         AuthServiceV2 auth(sessions);
 
         auto raw = makePacket(2, 777u, 9u, 0, 10, 100, 200);

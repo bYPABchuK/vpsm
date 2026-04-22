@@ -1,11 +1,14 @@
 #include "infrastructure/ControlPlaneBoost.hpp"
 #include "infrastructure/DataPlaneBoost.hpp"
+#include "adapter/MembershipStore.hpp"
 
 #include <atomic>
 #include <chrono>
 #include <csignal>
 #include <cstdlib>
+#include <filesystem>
 #include <iostream>
+#include <memory>
 #include <thread>
 
 namespace {
@@ -40,6 +43,14 @@ namespace {
         }
         return static_cast<std::uint16_t>(v);
     }
+
+    std::filesystem::path readPath(const char* envName, std::filesystem::path defaultPath) {
+        const char* raw = std::getenv(envName);
+        if (raw == nullptr || *raw == '\0') {
+            return defaultPath;
+        }
+        return std::filesystem::path(raw);
+    }
 }
 
 int main() {
@@ -49,9 +60,12 @@ int main() {
     const auto udpPort = readPort("VPSM_UDP_PORT", 4000);
     const auto httpPort = readPort("VPSM_CONTROL_PORT", 8080);
     const auto workers = readWorkers("VPSM_WORKERS", 2);
+    const auto metricsOutput = readPath("VPSM_METRICS_FILE", "vpsm_metrics.prom");
 
-    vpsm::server::infrastructure::DataPlaneBoost dataPlane(udpPort, workers);
-    vpsm::server::infrastructure::ControlPlaneBoost controlPlane(httpPort, workers);
+    auto sharedMembership = std::make_shared<vpsm::server::adapter::MembershipRegistry>();
+
+    vpsm::server::infrastructure::DataPlaneBoost dataPlane(udpPort, workers, metricsOutput, sharedMembership);
+    vpsm::server::infrastructure::ControlPlaneBoost controlPlane(httpPort, workers, sharedMembership);
 
     const auto dataStart = dataPlane.start();
     if (dataStart != 0) {
@@ -66,7 +80,11 @@ int main() {
         return 2;
     }
 
-    std::cout << "vpsm_router started: udp=" << udpPort << ", control=" << httpPort << ", workers=" << workers << "\n";
+    std::cout << "vpsm_router started: udp=" << udpPort
+              << ", control=" << httpPort
+              << ", workers=" << workers
+              << ", metrics=" << metricsOutput.string()
+              << "\n";
 
     while (!gStop.load()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(200));

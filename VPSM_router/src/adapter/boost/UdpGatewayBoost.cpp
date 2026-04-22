@@ -48,8 +48,8 @@ namespace vpsm::server::adapter::boostImpl {
             }
 
             const auto endpoint = udp::endpoint(
-                boost::asio::ip::address_v4(pkt.dest),
-                bindPort_
+                boost::asio::ip::address_v4(pkt.destIp),
+                pkt.destPort
             );
 
             socket_.async_send_to(
@@ -86,6 +86,7 @@ namespace vpsm::server::adapter::boostImpl {
                         .size = bytesReceived,
                         .type = domain::UDP,
                         .sourceIp = remoteEndpoint_.address().to_v4().to_uint(),
+                        .sourcePort = remoteEndpoint_.port(),
                     };
 
                     boost::asio::post(workers_, [this, pkt = std::move(pkt)]() mutable {

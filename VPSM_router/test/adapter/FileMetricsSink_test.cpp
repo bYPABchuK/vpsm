@@ -26,6 +26,10 @@ namespace {
             .packetsReceived = 1,
             .packetsForwarded = 2,
             .packetsDropped = 3,
+            .packetsDroppedParse = 4,
+            .packetsDroppedAuth = 5,
+            .packetsDroppedMembership = 6,
+            .packetsDroppedNoEndpoint = 7,
             .packetsResponded = 4,
             .usersOnline = 5,
         };
@@ -55,6 +59,10 @@ namespace {
             .packetsReceived = 11,
             .packetsForwarded = 22,
             .packetsDropped = 33,
+            .packetsDroppedParse = 44,
+            .packetsDroppedAuth = 55,
+            .packetsDroppedMembership = 66,
+            .packetsDroppedNoEndpoint = 77,
             .packetsResponded = 44,
             .usersOnline = 55,
         };
@@ -68,6 +76,10 @@ namespace {
         EXPECT_NE(content.find("packets_received 11"), std::string::npos);
         EXPECT_NE(content.find("packets_forwarded 22"), std::string::npos);
         EXPECT_NE(content.find("packets_dropped 33"), std::string::npos);
+        EXPECT_NE(content.find("packets_dropped_parse 44"), std::string::npos);
+        EXPECT_NE(content.find("packets_dropped_auth 55"), std::string::npos);
+        EXPECT_NE(content.find("packets_dropped_membership 66"), std::string::npos);
+        EXPECT_NE(content.find("packets_dropped_no_endpoint 77"), std::string::npos);
         EXPECT_NE(content.find("packets_responded 44"), std::string::npos);
         EXPECT_NE(content.find("users_online 55"), std::string::npos);
 
