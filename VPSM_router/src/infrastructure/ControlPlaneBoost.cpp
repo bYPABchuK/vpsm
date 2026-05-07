@@ -22,6 +22,7 @@
 #include "../application/ControlPlane/JsonUserNetworkListResponseEncoder.hpp"
 #include "../application/ControlPlane/JsonUserNetworkPeersListResponseEncoder.hpp"
 #include "../application/ControlPlane/SessionStore.hpp"
+#include "../application/ControlPlane/UiScreenService.hpp"
 #include "../application/ControlPlane/Endpoints/CreateNetworkEndpoint.hpp"
 #include "../application/ControlPlane/Endpoints/CreatePeerEndpoint.hpp"
 #include "../application/ControlPlane/Endpoints/JoinNetworkEndpoint.hpp"
@@ -29,6 +30,8 @@
 #include "../application/ControlPlane/Endpoints/LoginEndpoint.hpp"
 #include "../application/ControlPlane/Endpoints/NetworkPeersListEndpoint.hpp"
 #include "../application/ControlPlane/Endpoints/NetworkUserAddEndpoint.hpp"
+#include "../application/ControlPlane/Endpoints/UiLicensescreenEndpoint.hpp"
+#include "../application/ControlPlane/Endpoints/UiMainBodyEndpoint.hpp"
 #include "../application/ControlPlane/Endpoints/UserNetworkListEndpoint.hpp"
 #include "../application/ControlPlane/Endpoints/UserNetworkPeersListEndpoint.hpp"
 #include "../application/DataPlane/UserService.hpp"
@@ -62,6 +65,8 @@ namespace vpsm::server::infrastructure {
         Impl(
             std::uint16_t httpPort,
             std::uint16_t workerNum,
+            std::filesystem::path uiMainBodyPath,
+            std::filesystem::path uiLicensescreenPath,
             std::shared_ptr<port::IMembershipStore> membershipStore
         )
             : io_{},
@@ -89,6 +94,7 @@ namespace vpsm::server::infrastructure {
               leaveNetworkResponseEncoder_{std::make_shared<application::JsonLeaveNetworkResponseEncoder>()},
               loginDecoder_{std::make_shared<application::JsonLoginDecoder>()},
               loginResponseEncoder_{std::make_shared<application::JsonLoginResponseEncoder>()},
+              uiScreenService_{std::make_shared<application::UiScreenService>(std::move(uiMainBodyPath), std::move(uiLicensescreenPath))},
               createPeer_{std::make_shared<application::endpoints::CreatePeerEndpoint>(userService_, *createPeerDecoder_, *createPeerResponseEncoder_)},
               createNetwork_{std::make_shared<application::endpoints::CreateNetworkEndpoint>(userService_, *createNetworkDecoder_, *createNetworkResponseEncoder_)},
               joinNetwork_{std::make_shared<application::endpoints::JoinNetworkEndpoint>(userService_, *joinNetworkDecoder_, *joinNetworkResponseEncoder_, "PUT")},
@@ -98,6 +104,8 @@ namespace vpsm::server::infrastructure {
               userNetworkList_{std::make_shared<application::endpoints::UserNetworkListEndpoint>(userService_, *userNetworkListResponseEncoder_)},
               userNetworkPeersList_{std::make_shared<application::endpoints::UserNetworkPeersListEndpoint>(userService_, *userNetworkPeersListResponseEncoder_)},
               networkPeersList_{std::make_shared<application::endpoints::NetworkPeersListEndpoint>(userService_, *networkPeersListResponseEncoder_)},
+              uiMainBody_{std::make_shared<application::endpoints::UiMainBodyEndpoint>(*uiScreenService_, sessionStore_)},
+              uiLicensescreen_{std::make_shared<application::endpoints::UiLicensescreenEndpoint>(*uiScreenService_)},
               joinNetworkLegacy_{std::make_shared<application::endpoints::JoinNetworkEndpoint>(userService_, *joinNetworkDecoder_, *joinNetworkResponseEncoder_, "POST")},
               leaveNetworkLegacy_{std::make_shared<application::endpoints::LeaveNetworkEndpoint>(userService_, *leaveNetworkDecoder_, *leaveNetworkResponseEncoder_, "POST")},
               listener_{std::make_shared<adapter::boostImpl::HttpListenerBoost>(io_, router_, httpPort)},
@@ -138,6 +146,8 @@ namespace vpsm::server::infrastructure {
             router_->addRoute("GET", "/user/{id}/network-list", userNetworkList_);
             router_->addRoute("GET", "/user/{id}/network-peers-list", userNetworkPeersList_);
             router_->addRoute("GET", "/network/{id}/peers-list", networkPeersList_);
+            router_->addRoute("GET", "/ui/screens/main-body", uiMainBody_);
+            router_->addRoute("GET", "/ui/screens/license-screen", uiLicensescreen_);
 
 //            router_->addRoute("POST", "/user/peers", createPeer_);
 //            router_->addRoute("POST", "/user/networks", createNetwork_);
@@ -210,6 +220,7 @@ namespace vpsm::server::infrastructure {
         application::SessionStore sessionStore_;
         std::shared_ptr<application::JsonLoginDecoder> loginDecoder_;
         std::shared_ptr<application::JsonLoginResponseEncoder> loginResponseEncoder_;
+        std::shared_ptr<application::UiScreenService> uiScreenService_;
         std::shared_ptr<application::endpoints::CreatePeerEndpoint> createPeer_;
         std::shared_ptr<application::endpoints::CreateNetworkEndpoint> createNetwork_;
         std::shared_ptr<application::endpoints::JoinNetworkEndpoint> joinNetwork_;
@@ -219,6 +230,8 @@ namespace vpsm::server::infrastructure {
         std::shared_ptr<application::endpoints::UserNetworkListEndpoint> userNetworkList_;
         std::shared_ptr<application::endpoints::UserNetworkPeersListEndpoint> userNetworkPeersList_;
         std::shared_ptr<application::endpoints::NetworkPeersListEndpoint> networkPeersList_;
+        std::shared_ptr<application::endpoints::UiMainBodyEndpoint> uiMainBody_;
+        std::shared_ptr<application::endpoints::UiLicensescreenEndpoint> uiLicensescreen_;
         std::shared_ptr<application::endpoints::JoinNetworkEndpoint> joinNetworkLegacy_;
         std::shared_ptr<application::endpoints::LeaveNetworkEndpoint> leaveNetworkLegacy_;
         std::shared_ptr<adapter::boostImpl::HttpListenerBoost> listener_;
@@ -231,9 +244,11 @@ namespace vpsm::server::infrastructure {
     ControlPlaneBoost::ControlPlaneBoost(
         std::uint16_t httpPort,
         std::uint16_t workerNum,
+        std::filesystem::path uiMainBodyPath,
+        std::filesystem::path uiLicensescreenPath,
         std::shared_ptr<port::IMembershipStore> membershipStore
     )
-        : impl_(new Impl(httpPort, workerNum, std::move(membershipStore))) {}
+        : impl_(new Impl(httpPort, workerNum, std::move(uiMainBodyPath), std::move(uiLicensescreenPath), std::move(membershipStore))) {}
 
     ControlPlaneBoost::~ControlPlaneBoost() {
         if (impl_ != nullptr) {

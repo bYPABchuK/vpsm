@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "screenId": "main-body",
+  "components": [
+    {
+      "type": "column",
+      "children": [
+        {
+          "type": "row",
+          "children": [
+            {
+              "type": "button",
+              "text": "Добавить сеть",
+              "styleRef": "primary",
+              "weight": 1,
+              "action": { "type": "create_network", "params": {} }
+            },
+            {
+              "type": "button",
+              "text": "Подключиться",
+              "styleRef": "primary",
+              "weight": 1,
+              "padding": { "leftDp": 8 },
+              "action": { "type": "join_network", "params": {} }
+            }
+          ]
+        },
+        { "type": "spacer", "heightDp": 10 },
+        {
+          "type": "network_list",
+          "styleRef": "default",
+          "scroll": true,
+          "weight": 1
+        }
+      ]
+    }
+  ]
+}

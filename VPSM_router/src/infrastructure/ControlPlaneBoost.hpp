@@ -3,6 +3,7 @@
 #include "../port/IStartable.hpp"
 
 #include <cstdint>
+#include <filesystem>
 #include <memory>
 
 namespace vpsm::server::port {
@@ -15,6 +16,8 @@ namespace vpsm::server::infrastructure {
         ControlPlaneBoost(
             std::uint16_t httpPort,
             std::uint16_t workerNum,
+            std::filesystem::path uiMainBodyPath,
+            std::filesystem::path uiLicensescreenPath,
             std::shared_ptr<port::IMembershipStore> membershipStore = nullptr
         );
         ~ControlPlaneBoost();

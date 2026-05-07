@@ -61,11 +61,19 @@ int main() {
     const auto httpPort = readPort("VPSM_CONTROL_PORT", 8080);
     const auto workers = readWorkers("VPSM_WORKERS", 2);
     const auto metricsOutput = readPath("VPSM_METRICS_FILE", "vpsm_metrics.prom");
+    const auto uiMainBodyPath = readPath("VPSM_UI_MAIN_BODY_FILE", "config/ui/main-body.json");
+    const auto uiLicensescreenPath = readPath("VPSM_UI_LICENSE_screen_FILE", "config/ui/license-screen.json");
 
     auto sharedMembership = std::make_shared<vpsm::server::adapter::MembershipRegistry>();
 
     vpsm::server::infrastructure::DataPlaneBoost dataPlane(udpPort, workers, metricsOutput, sharedMembership);
-    vpsm::server::infrastructure::ControlPlaneBoost controlPlane(httpPort, workers, sharedMembership);
+    vpsm::server::infrastructure::ControlPlaneBoost controlPlane(
+        httpPort,
+        workers,
+        uiMainBodyPath,
+        uiLicensescreenPath,
+        sharedMembership
+    );
 
     const auto dataStart = dataPlane.start();
     if (dataStart != 0) {
@@ -84,6 +92,8 @@ int main() {
               << ", control=" << httpPort
               << ", workers=" << workers
               << ", metrics=" << metricsOutput.string()
+              << ", ui_main_body=" << uiMainBodyPath.string()
+              << ", ui_license_screen=" << uiLicensescreenPath.string()
               << "\n";
 
     while (!gStop.load()) {

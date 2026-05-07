@@ -1,0 +1,33 @@
+{
+  "ok": true,
+  "screen": {
+    "schemaVersion": 1,
+    "screenId": "license",
+    "components": [
+      {
+        "type": "column",
+        "weight": 1,
+        "children": [
+          {
+            "type": "column",
+            "weight": 1,
+            "scroll": true,
+            "padding": { "allDp": 12 },
+            "children": [
+              { "type": "text", "text": "Лицензия сервера", "styleRef": "title" },
+              { "type": "text", "text": "ВЫ ПОДКЛЮЧЕНЫ НА VPN СЕРВЕР ПОД МАНДАТОМ ЯПОНСКОЙ ИМПЕРАТОРСКОЙ КОНГЛАВСКОЙ АРМИИ, ДЛЯ ПРОДОЛЖЕНИЯ ПОЛЬЗОВАНИЯ ТРЕБУЕТСЯ 3 БУТЫЛКИ ПИВА 3 БАНКИ ЭНЕРГОСА, АРТЕФАКТ ЛОМОТЬ МЯСА И 3 ЧИПСИНЫ", "styleRef": "body" }
+            ]
+          },
+          {
+            "type": "row",
+            "padding": { "allDp": 12 },
+            "children": [
+              { "type": "button", "text": "посмотреть условие лицензии", "weight": 1, "action": { "type": "open_url", "params": { "url": "https://https://www.youtube.com/watch?v=dQw4w9WgXcQ" } } },
+              { "type": "button", "text": "назад", "weight": 1, "padding": { "leftDp": 8 }, "action": { "type": "close_screen", "params": {} } }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

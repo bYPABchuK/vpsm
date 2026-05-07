@@ -219,6 +219,27 @@ namespace {
         EXPECT_EQ(service.lastLeaveNetworkId, 9u);
     }
 
+    TEST(UserEndpointsTest, leaveNetwork_EmptyBodyAndNoContentType_UsesPathParamsTrue) {
+        UserServiceFake service;
+        vpsm::server::application::JsonLeaveNetworkDecoder decoder;
+        vpsm::server::application::JsonLeaveNetworkResponseEncoder encoder;
+        LeaveNetworkEndpoint endpoint(service, decoder, encoder);
+
+        ControlRequest req{
+            .method = "DELETE",
+            .path = "/user/networks/9/members/5",
+            .pathParams = {{"networkId", "9"}, {"peerId", "5"}},
+            .body = {},
+            .authenticatedPeerId = 5,
+        };
+
+        const auto response = endpoint.handle(req);
+
+        EXPECT_EQ(response.status, 200);
+        EXPECT_EQ(service.lastLeavePeerId, 5u);
+        EXPECT_EQ(service.lastLeaveNetworkId, 9u);
+    }
+
     TEST(UserEndpointsTest, userNetworkPeersList_ValidRequest_ReturnsNetworksWithPeersTrue) {
         UserServiceFake service;
         vpsm::server::application::JsonUserNetworkPeersListResponseEncoder encoder;
