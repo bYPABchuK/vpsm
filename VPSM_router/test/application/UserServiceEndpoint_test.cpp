@@ -1,6 +1,7 @@
 #include "../../src/application/ControlPlane/Endpoints/CreatePeerEndpoint.hpp"
 #include "../../src/application/ControlPlane/Endpoints/CreateNetworkEndpoint.hpp"
 #include "../../src/application/ControlPlane/Endpoints/JoinNetworkEndpoint.hpp"
+#include "../../src/application/ControlPlane/Endpoints/JoinNetworkByNameEndpoint.hpp"
 #include "../../src/application/ControlPlane/Endpoints/LeaveNetworkEndpoint.hpp"
 #include "../../src/application/ControlPlane/Endpoints/UserNetworkPeersListEndpoint.hpp"
 #include "../../src/application/ControlPlane/JsonCreatePeerDecoder.hpp"
@@ -9,11 +10,13 @@
 #include "../../src/application/ControlPlane/JsonCreateNetworkResponseEncoder.hpp"
 #include "../../src/application/ControlPlane/JsonJoinNetworkDecoder.hpp"
 #include "../../src/application/ControlPlane/JsonJoinNetworkResponseEncoder.hpp"
+#include "../../src/application/ControlPlane/JsonNetworkUserAddResponseEncoder.hpp"
 #include "../../src/application/ControlPlane/JsonLeaveNetworkDecoder.hpp"
 #include "../../src/application/ControlPlane/JsonLeaveNetworkResponseEncoder.hpp"
 #include "../../src/application/ControlPlane/JsonUserNetworkPeersListResponseEncoder.hpp"
 
 #include <gtest/gtest.h>
+#include <boost/json/parse.hpp>
 
 #include <string>
 
@@ -22,6 +25,7 @@ namespace {
     using vpsm::server::application::endpoints::CreateNetworkEndpoint;
     using vpsm::server::application::endpoints::CreatePeerEndpoint;
     using vpsm::server::application::endpoints::JoinNetworkEndpoint;
+    using vpsm::server::application::endpoints::JoinNetworkByNameEndpoint;
     using vpsm::server::application::endpoints::LeaveNetworkEndpoint;
     using vpsm::server::application::endpoints::UserNetworkPeersListEndpoint;
 
@@ -39,7 +43,14 @@ namespace {
 
         vpsm::server::port::CreatePeerResult createPeerResult = vpsm::server::port::CreatePeerSuccess{.peerId = 42};
         vpsm::server::port::CreateNetworkResult createNetworkResult = vpsm::server::port::CreateNetworkSuccess{.networkId = 77};
-        vpsm::server::port::JoinNetworkResult joinNetworkResult = vpsm::server::port::JoinNetworkSuccess{.vip = 111, .alreadyExists = false};
+        vpsm::server::port::JoinNetworkResult joinNetworkResult = vpsm::server::port::JoinNetworkSuccess{
+            .vip = 0x0AF00905u,
+            .networkAddress = 0x0AF00900u,
+            .prefixLength = 24,
+            .mtu = 1400,
+            .alreadyExists = false,
+            .networkId = 9,
+        };
         vpsm::server::port::ActionResult leaveNetworkResult = vpsm::server::port::ActionSuccess{};
         std::string lastNickname;
         std::string lastPassword;
@@ -64,16 +75,23 @@ namespace {
             return joinNetworkResult;
         }
 
+        vpsm::server::port::JoinNetworkResult joinNetworkByName(std::uint64_t peerId, const std::string& name, const std::string& passwordHash) override {
+            lastJoinPeerId = peerId;
+            lastNetworkName = name;
+            lastPassword = passwordHash;
+            return joinNetworkResult;
+        }
+
         vpsm::server::port::ActionResult leaveNetwork(std::uint64_t peerId, std::uint64_t networkId) override {
             lastLeavePeerId = peerId;
             lastLeaveNetworkId = networkId;
             return leaveNetworkResult;
         }
 
-        mutable std::vector<vpsm::server::domain::VNetwork> userNetworks;
+        mutable std::vector<vpsm::server::domain::NetworkMembership> userNetworks;
         mutable std::vector<vpsm::server::domain::Peer> networkPeers;
 
-        std::vector<vpsm::server::domain::VNetwork> listUserNetworks(std::uint64_t) const override {
+        std::vector<vpsm::server::domain::NetworkMembership> listUserNetworks(std::uint64_t) const override {
             return userNetworks;
         }
         std::vector<vpsm::server::domain::Peer> listNetworkPeers(std::uint64_t) const override {
@@ -175,6 +193,39 @@ namespace {
         EXPECT_NE(body.find("\"network_name_already_exists\""), std::string::npos);
     }
 
+    TEST(UserEndpointsTest, createNetwork_AuthenticatedPayloadWithoutOwnerId_UsesSessionOwner) {
+        UserServiceFake service;
+        vpsm::server::application::JsonCreateNetworkDecoder decoder;
+        vpsm::server::application::JsonCreateNetworkResponseEncoder encoder;
+        CreateNetworkEndpoint endpoint(service, decoder, encoder);
+        const auto response = endpoint.handle(ControlRequest{
+            .method = "POST", .path = "/network/create",
+            .headers = {{"Content-Type", "application/json"}},
+            .body = bytes(R"({"name":"123","passwordHash":"abc"})"),
+            .authenticatedPeerId = 7,
+        });
+        EXPECT_EQ(response.status, 200);
+        EXPECT_EQ(service.lastOwnerPeerId, 7u);
+        EXPECT_EQ(service.lastNetworkName, "123");
+    }
+
+    TEST(UserEndpointsTest, joinNetworkByName_UsesAuthenticatedPeerAndName) {
+        UserServiceFake service;
+        vpsm::server::application::JsonNetworkUserAddResponseEncoder encoder;
+        JoinNetworkByNameEndpoint endpoint(service, encoder);
+        const auto response = endpoint.handle(ControlRequest{
+            .method = "PUT", .path = "/network/join",
+            .headers = {{"Content-Type", "application/json"}},
+            .body = bytes(R"({"name":"team","passwordHash":"abc"})"),
+            .authenticatedPeerId = 5,
+        });
+        EXPECT_EQ(response.status, 200);
+        EXPECT_EQ(service.lastJoinPeerId, 5u);
+        EXPECT_EQ(service.lastNetworkName, "team");
+        const auto body = boost::json::parse(std::string(response.body.begin(), response.body.end())).as_object();
+        EXPECT_EQ(body.at("networkId").as_string(), "9");
+    }
+
     TEST(UserEndpointsTest, joinNetwork_FromPathParams_UsesRestParamsTrue) {
         UserServiceFake service;
         vpsm::server::application::JsonJoinNetworkDecoder decoder;
@@ -195,6 +246,14 @@ namespace {
         EXPECT_EQ(response.status, 200);
         EXPECT_EQ(service.lastJoinPeerId, 5u);
         EXPECT_EQ(service.lastJoinNetworkId, 9u);
+        const auto body = boost::json::parse(
+            std::string(response.body.begin(), response.body.end())
+        ).as_object();
+        EXPECT_EQ(body.at("networkId").as_string(), "9");
+        EXPECT_EQ(body.at("address").as_string(), "10.240.9.5");
+        EXPECT_EQ(body.at("networkAddress").as_string(), "10.240.9.0");
+        EXPECT_EQ(body.at("prefixLength").as_int64(), 24);
+        EXPECT_EQ(body.at("mtu").as_int64(), 1400);
     }
 
     TEST(UserEndpointsTest, leaveNetwork_FromPathParams_UsesRestParamsTrue) {
@@ -245,13 +304,19 @@ namespace {
         vpsm::server::application::JsonUserNetworkPeersListResponseEncoder encoder;
         UserNetworkPeersListEndpoint endpoint(service, encoder);
 
-        service.userNetworks.push_back(vpsm::server::domain::VNetwork{
-            .id = 9,
-            .name = "net-9",
-            .owner = vpsm::server::domain::Peer{.peerId = 5, .vip = 0},
+        service.userNetworks.push_back(vpsm::server::domain::NetworkMembership{
+            .network = vpsm::server::domain::VNetwork{
+                .id = 9,
+                .name = "net-9",
+                .networkAddress = 0x0AF00900u,
+                .prefixLength = 24,
+                .mtu = 1400,
+                .owner = vpsm::server::domain::Peer{.peerId = 5, .vip = 0},
+            },
+            .localVip = 0x0AF00901u,
         });
-        service.networkPeers.push_back(vpsm::server::domain::Peer{.peerId = 5, .vip = 1001});
-        service.networkPeers.push_back(vpsm::server::domain::Peer{.peerId = 6, .vip = 1002});
+        service.networkPeers.push_back(vpsm::server::domain::Peer{.peerId = 5, .vip = 1001, .nickname = "alice"});
+        service.networkPeers.push_back(vpsm::server::domain::Peer{.peerId = 6, .vip = 1002, .nickname = "bob"});
 
         const auto response = endpoint.handle(ControlRequest{
             .method = "GET",
@@ -267,6 +332,7 @@ namespace {
         EXPECT_NE(body.find("\"ok\":true"), std::string::npos);
         EXPECT_NE(body.find("\"networks\""), std::string::npos);
         EXPECT_NE(body.find("\"peers\""), std::string::npos);
+        EXPECT_NE(body.find("\"nickname\":\"alice\""), std::string::npos);
     }
 
     TEST(UserEndpointsTest, userNetworkPeersList_Forbidden_Returns403True) {

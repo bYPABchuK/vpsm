@@ -42,12 +42,18 @@ public:
         const std::string& passwordHash
     ) = 0;
 
+    virtual JoinNetworkResult joinNetworkByName(
+        std::uint64_t peerId,
+        const std::string& networkName,
+        const std::string& passwordHash
+    ) = 0;
+
     virtual ActionResult leaveNetwork(
         std::uint64_t peerId,
         std::uint64_t networkId
     ) = 0;
 
-    virtual std::vector<domain::VNetwork> listUserNetworks(std::uint64_t peerId) const = 0;
+    virtual std::vector<domain::NetworkMembership> listUserNetworks(std::uint64_t peerId) const = 0;
     virtual std::vector<domain::Peer> listNetworkPeers(std::uint64_t networkId) const = 0;
 };
 

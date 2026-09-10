@@ -13,6 +13,7 @@ namespace vpsm::server::repository {
         std::optional<std::uint64_t> createPeer(const std::string& nickname, const std::string& passwordHash) override;
         bool deletePeer(std::uint64_t peerId) override;
         std::optional<std::string> getPasswordHash(std::uint64_t peerId) const override;
+        std::optional<std::string> getNickname(std::uint64_t peerId) const override;
         std::optional<std::uint64_t> findPeerIdByNickname(const std::string& nickname) const override;
         bool exists(std::uint64_t peerId) const override;
 

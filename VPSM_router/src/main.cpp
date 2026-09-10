@@ -1,6 +1,7 @@
 #include "infrastructure/ControlPlaneBoost.hpp"
 #include "infrastructure/DataPlaneBoost.hpp"
 #include "adapter/MembershipStore.hpp"
+#include "application/ControlPlane/SessionStore.hpp"
 
 #include <atomic>
 #include <chrono>
@@ -65,14 +66,18 @@ int main() {
     const auto uiLicensescreenPath = readPath("VPSM_UI_LICENSE_screen_FILE", "config/ui/license-screen.json");
 
     auto sharedMembership = std::make_shared<vpsm::server::adapter::MembershipRegistry>();
+    auto sharedSessions = std::make_shared<vpsm::server::application::SessionStore>();
 
-    vpsm::server::infrastructure::DataPlaneBoost dataPlane(udpPort, workers, metricsOutput, sharedMembership);
+    vpsm::server::infrastructure::DataPlaneBoost dataPlane(
+        udpPort, workers, metricsOutput, sharedMembership, sharedSessions
+    );
     vpsm::server::infrastructure::ControlPlaneBoost controlPlane(
         httpPort,
         workers,
         uiMainBodyPath,
         uiLicensescreenPath,
-        sharedMembership
+        sharedMembership,
+        sharedSessions
     );
 
     const auto dataStart = dataPlane.start();

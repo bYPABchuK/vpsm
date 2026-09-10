@@ -1,5 +1,6 @@
 #include "../../src/application/DataPlane/UserService.hpp"
 #include "../../src/port/UserServiceResult.hpp"
+#include "../../src/domain/type/overlayNetwork.hpp"
 
 #include <gtest/gtest.h>
 
@@ -26,6 +27,11 @@ namespace {
             return std::nullopt;
         }
 
+        std::optional<std::string> getNickname(std::uint64_t peerId) const override {
+            const auto it = nicknamesByPeerId.find(peerId);
+            return it == nicknamesByPeerId.end() ? std::nullopt : std::optional<std::string>(it->second);
+        }
+
         std::optional<std::uint64_t> findPeerIdByNickname(const std::string&) const override {
             return std::nullopt;
         }
@@ -38,6 +44,7 @@ namespace {
         std::optional<std::uint64_t> createPeerResult = 1;
         bool deletePeerResult = true;
         mutable std::unordered_map<std::uint64_t, bool> existsByPeerId;
+        mutable std::unordered_map<std::uint64_t, std::string> nicknamesByPeerId;
         std::uint64_t deletedPeerId = 0;
     };
 
@@ -63,6 +70,13 @@ namespace {
             }
 
             return it->second;
+        }
+
+        std::optional<VNetwork> getNetworkByName(const std::string& name) const override {
+            for (const auto& [_, network] : networksById) {
+                if (network.name == name) return network;
+            }
+            return std::nullopt;
         }
 
         std::vector<VNetwork> listNetworks() const override {
@@ -107,6 +121,11 @@ namespace {
             lastPeerId = peerId;
             return releaseVipResult;
         }
+        bool removeNetwork(std::uint32_t networkId) override {
+            ++removeNetworkCalls;
+            lastNetworkId = networkId;
+            return removeNetworkResult;
+        }
 
         bool bindPeer(std::uint32_t, std::uint64_t, std::uint32_t) override { return false; }
         bool unbindPeer(std::uint32_t, std::uint64_t, std::uint32_t) override { return false; }
@@ -136,11 +155,13 @@ namespace {
 
         std::optional<std::uint32_t> allocateVipResult = 123;
         bool releaseVipResult = true;
+        bool removeNetworkResult = true;
         mutable std::unordered_map<std::uint64_t, bool> hasPeerByKey;
         mutable std::unordered_map<std::uint64_t, std::uint32_t> resolveVipByKey;
 
         int allocateVipCalls = 0;
         int releaseVipCalls = 0;
+        int removeNetworkCalls = 0;
         std::uint32_t lastNetworkId = 0;
         std::uint64_t lastPeerId = 0;
     };
@@ -150,6 +171,12 @@ namespace {
         net.id = id;
         net.name = "net";
         net.password_hash = passwordHash;
+        const auto overlay = vpsm::server::domain::overlayConfigForNetworkId(id);
+        if (overlay.has_value()) {
+            net.networkAddress = overlay->networkAddress;
+            net.prefixLength = overlay->prefixLength;
+            net.mtu = overlay->mtu;
+        }
         net.owner.peerId = ownerPeerId;
         net.owner.vip = 1;
         return net;
@@ -228,7 +255,11 @@ namespace {
         const auto vip = service.joinNetwork(9, 5, "pass");
 
         ASSERT_TRUE(std::holds_alternative<vpsm::server::port::JoinNetworkSuccess>(vip));
-        EXPECT_EQ(std::get<vpsm::server::port::JoinNetworkSuccess>(vip).vip, 777u);
+        const auto& joined = std::get<vpsm::server::port::JoinNetworkSuccess>(vip);
+        EXPECT_EQ(joined.vip, 777u);
+        EXPECT_EQ(joined.networkAddress, 0x0AF00000u);
+        EXPECT_EQ(joined.prefixLength, 16u);
+        EXPECT_EQ(joined.mtu, 1400u);
         EXPECT_EQ(membership.allocateVipCalls, 0);
     }
 

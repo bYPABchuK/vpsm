@@ -1,0 +1,10 @@
+Package: vpsm-client
+Version: @VERSION@
+Section: net
+Priority: optional
+Architecture: @ARCHITECTURE@
+Maintainer: VPSM Project <tiubo@localhost>
+Depends: @SHLIB_DEPENDS@, sudo | doas, iproute2, qml6-module-qtquick, qml6-module-qtquick-window
+Description: Authenticated VPSM IPv4 TUN client
+ Qt 6 GUI and headless VPSM clients with an authenticated UDP data plane,
+ replay protection, Linux TUN configuration and overlay IPv4 routing.

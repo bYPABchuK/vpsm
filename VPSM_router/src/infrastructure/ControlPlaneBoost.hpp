@@ -10,6 +10,10 @@ namespace vpsm::server::port {
     class IMembershipStore;
 }
 
+namespace vpsm::server::application {
+    class SessionStore;
+}
+
 namespace vpsm::server::infrastructure {
     class ControlPlaneBoost final : public port::IStartable {
     public:
@@ -18,7 +22,8 @@ namespace vpsm::server::infrastructure {
             std::uint16_t workerNum,
             std::filesystem::path uiMainBodyPath,
             std::filesystem::path uiLicensescreenPath,
-            std::shared_ptr<port::IMembershipStore> membershipStore = nullptr
+            std::shared_ptr<port::IMembershipStore> membershipStore = nullptr,
+            std::shared_ptr<application::SessionStore> sessionStore = nullptr
         );
         ~ControlPlaneBoost();
         ControlPlaneBoost(const ControlPlaneBoost&) = delete;

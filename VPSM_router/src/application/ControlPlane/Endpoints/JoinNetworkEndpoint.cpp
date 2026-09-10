@@ -27,6 +27,15 @@ namespace vpsm::server::application::endpoints {
             });
         }
 
-        return responseEncoder_.encode(dto::JoinNetworkResultDto{.ok = true, .status = 200, .vip = std::get<port::JoinNetworkSuccess>(vip).vip});
+        const auto& joined = std::get<port::JoinNetworkSuccess>(vip);
+        return responseEncoder_.encode(dto::JoinNetworkResultDto{
+            .ok = true,
+            .status = 200,
+            .networkId = dto->networkId,
+            .vip = joined.vip,
+            .networkAddress = joined.networkAddress,
+            .prefixLength = joined.prefixLength,
+            .mtu = joined.mtu,
+        });
     }
 }

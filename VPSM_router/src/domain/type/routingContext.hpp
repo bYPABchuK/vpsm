@@ -6,6 +6,7 @@
 #include "routeActions.hpp"
 
 #include <optional>
+#include <vector>
 namespace vpsm::server::domain {
     struct RoutingContext {
         PacketIn packet;
@@ -15,6 +16,7 @@ namespace vpsm::server::domain {
         std::optional<std::uint64_t> srcPeerId;
         std::optional<std::uint64_t> dstPeerId;
         std::optional<PeerEndpoint> dstEndpoint;
+        std::shared_ptr<std::vector<std::uint8_t>> plaintextInnerAndPayload;
 
         RouteAction action = Drop{};
         bool stop = false;

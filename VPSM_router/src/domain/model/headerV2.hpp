@@ -12,6 +12,7 @@ namespace vpsm::server::domain {
 
     static constexpr std::size_t OUTER_HEADER_V2_SIZE = 17;
     static constexpr std::size_t INNER_HEADER_V2_SIZE = 13;
+    static constexpr std::size_t AUTH_TAG_V2_SIZE = 16;
     static constexpr std::uint8_t VERSION_V2 = 2;
 
     struct OutPacketHeaderV2 {

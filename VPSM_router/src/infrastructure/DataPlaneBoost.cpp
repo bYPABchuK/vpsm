@@ -7,6 +7,8 @@
 #include "../adapter/boost/TcpManagerBoost.hpp"
 #include "../adapter/boost/UdpGatewayBoost.hpp"
 #include "../application/DataPlane/AtomicMetricCounter.hpp"
+#include "../application/DataPlane/AuthServiceV2.hpp"
+#include "../application/ControlPlane/SessionStore.hpp"
 #include "../application/DataPlane/LogRoutingService.hpp"
 #include "../application/DataPlane/MetricService.hpp"
 #include "../application/DataPlane/RoutingService.hpp"
@@ -28,6 +30,12 @@ namespace vpsm::server::infrastructure {
             }
             return membershipStore;
         }
+
+        std::shared_ptr<application::SessionStore> ensureSessionStore(
+            std::shared_ptr<application::SessionStore> sessionStore
+        ) {
+            return sessionStore ? std::move(sessionStore) : std::make_shared<application::SessionStore>();
+        }
     }
 
     class DataPlaneBoost::Impl {
@@ -36,14 +44,17 @@ namespace vpsm::server::infrastructure {
             std::uint16_t udpPort,
             std::uint16_t workerNum,
             std::filesystem::path metricsOutput,
-            std::shared_ptr<port::IMembershipStore> membershipStore
+            std::shared_ptr<port::IMembershipStore> membershipStore,
+            std::shared_ptr<application::SessionStore> sessionStore
         )
             : io_{},
               workGuard_{boost::asio::make_work_guard(io_)},
               workers_{workerNum},
               membershipStore_{ensureMembershipStore(std::move(membershipStore))},
+              sessionStore_{ensureSessionStore(std::move(sessionStore))},
               endpointRegistry_{},
-              routingService_{*membershipStore_, nullptr, &endpointRegistry_},
+              authService_{*sessionStore_},
+              routingService_{*membershipStore_, authService_, &endpointRegistry_},
               logRoutingService_{routingService_, metricCounter_},
               udpGateway_{io_, workers_, logRoutingService_, udpPort},
               tcpManager_{io_, workers_},
@@ -91,7 +102,9 @@ namespace vpsm::server::infrastructure {
         boost::asio::thread_pool workers_;
 
         std::shared_ptr<port::IMembershipStore> membershipStore_;
+        std::shared_ptr<application::SessionStore> sessionStore_;
         adapter::PeerEndpointRegistry endpointRegistry_;
+        application::AuthServiceV2 authService_;
         application::RoutingService routingService_;
         application::AtomicMetricCounter metricCounter_;
         application::LogRoutingService logRoutingService_;
@@ -110,9 +123,13 @@ namespace vpsm::server::infrastructure {
         std::uint16_t udpPort,
         std::uint16_t workerNum,
         std::filesystem::path metricsOutput,
-        std::shared_ptr<port::IMembershipStore> membershipStore
+        std::shared_ptr<port::IMembershipStore> membershipStore,
+        std::shared_ptr<application::SessionStore> sessionStore
     )
-        : impl_(new Impl(udpPort, workerNum, std::move(metricsOutput), std::move(membershipStore))) {}
+        : impl_(new Impl(
+            udpPort, workerNum, std::move(metricsOutput),
+            std::move(membershipStore), std::move(sessionStore)
+        )) {}
 
     DataPlaneBoost::~DataPlaneBoost() {
         if (impl_ != nullptr) {

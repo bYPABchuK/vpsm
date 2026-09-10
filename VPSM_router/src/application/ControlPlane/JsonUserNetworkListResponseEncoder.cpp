@@ -1,5 +1,6 @@
 #include "JsonUserNetworkListResponseEncoder.hpp"
 #include "JsonSupport.hpp"
+#include "../../domain/type/overlayNetwork.hpp"
 
 #include <boost/json/array.hpp>
 #include <boost/json/object.hpp>
@@ -11,9 +12,14 @@ namespace vpsm::server::application {
         boost::json::array items;
         for (const auto& network : response.networks) {
             boost::json::object item;
-            item["id"] = static_cast<std::int64_t>(network.id);
+            item["id"] = std::to_string(network.id);
             item["name"] = network.name;
-            item["ownerPeerId"] = static_cast<std::int64_t>(network.ownerPeerId);
+            item["ownerPeerId"] = std::to_string(network.ownerPeerId);
+            item["address"] = domain::ipv4ToString(network.localVip);
+            item["vip"] = domain::ipv4ToString(network.localVip);
+            item["networkAddress"] = domain::ipv4ToString(network.networkAddress);
+            item["prefixLength"] = network.prefixLength;
+            item["mtu"] = network.mtu;
             items.push_back(std::move(item));
         }
         out["networks"] = std::move(items);

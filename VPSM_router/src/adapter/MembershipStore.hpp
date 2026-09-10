@@ -22,6 +22,7 @@ public:
         std::uint32_t networkId,
         std::uint64_t peerId
     ) override;
+    bool removeNetwork(std::uint32_t networkId) override;
 
     bool bindPeer(
         std::uint32_t networkId,
@@ -58,12 +59,15 @@ private:
     struct NetworkState {
         std::unordered_map<std::uint64_t, domain::Peer> peersById;
         std::unordered_map<std::uint32_t, std::uint64_t> peerIdByVip;
-        application::VipAllocator allocator;
     };
 
 private:
     mutable std::shared_mutex mutex_;
     std::unordered_map<std::uint32_t, NetworkState> networks_;
+    std::unordered_map<std::uint64_t, std::uint32_t> vipByPeerId_;
+    std::unordered_map<std::uint32_t, std::uint64_t> peerIdByVip_;
+    std::unordered_map<std::uint64_t, std::size_t> membershipCountByPeerId_;
+    application::VipAllocator allocator_{0x0AF00001u, 0x0AF0FFFEu};
 };
 
 }

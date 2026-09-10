@@ -13,7 +13,7 @@ namespace vpsm::server::application {
     public:
         RoutingService(
             port::IMembershipStore& memStore,
-            port::IAuthServiceV2* authService = nullptr,
+            port::IAuthServiceV2& authService,
             port::IPeerEndpointRegistry* endpointRegistry = nullptr
         );
 
@@ -21,7 +21,7 @@ namespace vpsm::server::application {
 
     private:
         port::IMembershipStore& memStore_;
-        port::IAuthServiceV2* authService_;
+        port::IAuthServiceV2& authService_;
         port::IPeerEndpointRegistry* endpointRegistry_;
         std::unique_ptr<port::IRoutingPipeline> pipeline_;
     };

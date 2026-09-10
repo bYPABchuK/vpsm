@@ -17,6 +17,7 @@ namespace vpsm::server::application::dto {
         std::optional<std::uint64_t> peerId;
         std::optional<std::uint64_t> sessionId;
         std::optional<std::uint64_t> sessionKey;
+        std::optional<std::string> dataPlaneKey;
         std::optional<std::string> error;
     };
 
@@ -54,7 +55,11 @@ namespace vpsm::server::application::dto {
     struct JoinNetworkResultDto {
         bool ok = false;
         std::uint16_t status = 400;
+        std::optional<std::uint64_t> networkId;
         std::optional<std::uint32_t> vip;
+        std::optional<std::uint32_t> networkAddress;
+        std::optional<std::uint8_t> prefixLength;
+        std::optional<std::uint16_t> mtu;
         std::optional<std::string> error;
     };
 
@@ -89,7 +94,11 @@ namespace vpsm::server::application::dto {
     struct NetworkUserAddResultDto {
         bool ok = false;
         std::uint16_t status = 400;
+        std::optional<std::uint64_t> networkId;
         std::optional<std::uint32_t> vip;
+        std::optional<std::uint32_t> networkAddress;
+        std::optional<std::uint8_t> prefixLength;
+        std::optional<std::uint16_t> mtu;
         bool alreadyExists = false;
         std::optional<std::string> error;
     };
@@ -98,6 +107,10 @@ namespace vpsm::server::application::dto {
         std::uint64_t id = 0;
         std::string name;
         std::uint64_t ownerPeerId = 0;
+        std::uint32_t localVip = 0;
+        std::uint32_t networkAddress = 0;
+        std::uint8_t prefixLength = 0;
+        std::uint16_t mtu = 0;
     };
 
     struct UserNetworkListResultDto {
@@ -110,12 +123,17 @@ namespace vpsm::server::application::dto {
     struct NetworkPeerItemDto {
         std::uint64_t peerId = 0;
         std::uint32_t vip = 0;
+        std::string nickname;
     };
 
     struct UserNetworkWithPeersItemDto {
         std::uint64_t id = 0;
         std::string name;
         std::uint64_t ownerPeerId = 0;
+        std::uint32_t localVip = 0;
+        std::uint32_t networkAddress = 0;
+        std::uint8_t prefixLength = 0;
+        std::uint16_t mtu = 0;
         std::vector<NetworkPeerItemDto> peers;
     };
 

@@ -10,6 +10,10 @@ namespace vpsm::server::port {
     class IMembershipStore;
 }
 
+namespace vpsm::server::application {
+    class SessionStore;
+}
+
 namespace vpsm::server::infrastructure {
     class DataPlaneBoost final : public port::IDataPlane {
     public:
@@ -17,7 +21,8 @@ namespace vpsm::server::infrastructure {
             std::uint16_t udpPort,
             std::uint16_t workerNum,
             std::filesystem::path metricsOutput = "vpsm_metrics.prom",
-            std::shared_ptr<port::IMembershipStore> membershipStore = nullptr
+            std::shared_ptr<port::IMembershipStore> membershipStore = nullptr,
+            std::shared_ptr<application::SessionStore> sessionStore = nullptr
         );
         ~DataPlaneBoost();
         DataPlaneBoost(const DataPlaneBoost&) = delete;

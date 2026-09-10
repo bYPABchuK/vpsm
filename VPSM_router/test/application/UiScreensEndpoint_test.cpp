@@ -1,4 +1,4 @@
-#include "../../src/application/ControlPlane/Endpoints/UiLicensescreenEndpoint.hpp"
+#include "../../src/application/ControlPlane/Endpoints/UiLicenseCardEndpoint.hpp"
 #include "../../src/application/ControlPlane/Endpoints/UiMainBodyEndpoint.hpp"
 #include "../../src/application/ControlPlane/SessionStore.hpp"
 #include "../../src/application/ControlPlane/UiScreenService.hpp"

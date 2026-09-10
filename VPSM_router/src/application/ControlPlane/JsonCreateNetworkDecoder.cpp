@@ -12,10 +12,12 @@ namespace vpsm::server::application {
             return std::nullopt;
         }
 
-        const auto ownerPeerId = json_support::readU64(*object, "ownerPeerId");
+        const auto ownerPeerId = request.authenticatedPeerId
+            ? request.authenticatedPeerId
+            : json_support::readU64(*object, "ownerPeerId");
         const auto name = json_support::readString(*object, "name");
         const auto passwordHash = json_support::readString(*object, "passwordHash");
-        if (!ownerPeerId || !name || !passwordHash) {
+        if (!ownerPeerId || !name || name->empty() || !passwordHash) {
             return std::nullopt;
         }
 

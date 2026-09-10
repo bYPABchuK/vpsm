@@ -7,7 +7,7 @@ namespace vpsm::server::application::endpoints {
         }
 
         if (!request.authenticatedPeerId.has_value()) {
-            return responseEncoder_.encode(dto::UserNetworkListResultDto{.ok = false, .status = 402, .error = "auth_required"});
+            return responseEncoder_.encode(dto::UserNetworkListResultDto{.ok = false, .status = 401, .error = "auth_required"});
         }
 
         const auto it = request.pathParams.find("id");
@@ -32,11 +32,16 @@ namespace vpsm::server::application::endpoints {
             .ok = true,
             .status = 200,
         };
-        for (const auto& network : networks) {
+        for (const auto& membership : networks) {
+            const auto& network = membership.network;
             result.networks.push_back(dto::UserNetworkItemDto{
                 .id = network.id,
                 .name = network.name,
                 .ownerPeerId = network.owner.peerId,
+                .localVip = membership.localVip,
+                .networkAddress = network.networkAddress,
+                .prefixLength = network.prefixLength,
+                .mtu = network.mtu,
             });
         }
 

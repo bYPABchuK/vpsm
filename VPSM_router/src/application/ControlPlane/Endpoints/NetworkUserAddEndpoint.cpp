@@ -9,24 +9,12 @@ namespace vpsm::server::application::endpoints {
         }
 
         if (!auth_policy::isAuthenticated(request)) {
-            return responseEncoder_.encode(dto::NetworkUserAddResultDto{.ok = false, .status = 402, .error = "auth_required"});
+            return responseEncoder_.encode(dto::NetworkUserAddResultDto{.ok = false, .status = 401, .error = "auth_required"});
         }
 
         const auto dto = requestDecoder_.decode(request);
         if (!dto.has_value()) {
             return responseEncoder_.encode(dto::NetworkUserAddResultDto{.ok = false, .status = 400, .error = "invalid_payload"});
-        }
-
-        const auto peers = userService_.listNetworkPeers(dto->networkId);
-        for (const auto& p : peers) {
-            if (p.peerId == *request.authenticatedPeerId) {
-                return responseEncoder_.encode(dto::NetworkUserAddResultDto{
-                    .ok = true,
-                    .status = 208,
-                    .vip = p.vip,
-                    .alreadyExists = true,
-                });
-            }
         }
 
         const auto vip = userService_.joinNetwork(*request.authenticatedPeerId, dto->networkId, dto->passwordHash);
@@ -43,8 +31,12 @@ namespace vpsm::server::application::endpoints {
 
         return responseEncoder_.encode(dto::NetworkUserAddResultDto{
             .ok = true,
-            .status = 200,
+            .status = static_cast<uint16_t>(joinSuccess.alreadyExists ? 208 : 200),
+            .networkId = dto->networkId,
             .vip = joinSuccess.vip,
+            .networkAddress = joinSuccess.networkAddress,
+            .prefixLength = joinSuccess.prefixLength,
+            .mtu = joinSuccess.mtu,
             .alreadyExists = joinSuccess.alreadyExists,
         });
     }

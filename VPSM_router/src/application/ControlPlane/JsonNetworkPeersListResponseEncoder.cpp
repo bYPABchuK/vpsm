@@ -1,5 +1,6 @@
 #include "JsonNetworkPeersListResponseEncoder.hpp"
 #include "JsonSupport.hpp"
+#include "../../domain/type/overlayNetwork.hpp"
 
 #include <boost/json/array.hpp>
 #include <boost/json/object.hpp>
@@ -11,8 +12,9 @@ namespace vpsm::server::application {
         boost::json::array items;
         for (const auto& peer : response.peers) {
             boost::json::object item;
-            item["peerId"] = static_cast<std::int64_t>(peer.peerId);
-            item["vip"] = static_cast<std::int64_t>(peer.vip);
+            item["peerId"] = std::to_string(peer.peerId);
+            item["vip"] = domain::ipv4ToString(peer.vip);
+            item["nickname"] = peer.nickname;
             items.push_back(std::move(item));
         }
         out["peers"] = std::move(items);

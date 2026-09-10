@@ -1,4 +1,5 @@
 #include "../../src/application/DataPlane/RoutingService.hpp"
+#include "../../src/application/DataPlane/PacketParserV2.hpp"
 
 #include <gtest/gtest.h>
 
@@ -19,19 +20,79 @@ namespace {
 
     class AuthServiceV2Fake final : public vpsm::server::port::IAuthServiceV2 {
     public:
-        std::optional<AuthResultV2> verifyAndDecrypt(const PacketIn&) override {
+        std::optional<AuthResultV2> verifyAndDecrypt(const PacketIn& packet) override {
             ++verifyCalls;
+            if (passthroughForLegacyUnitTest) {
+                const auto outer = vpsm::server::application::PacketParserV2::parseOuter(packet);
+                const auto inner = packet.buf
+                    ? vpsm::server::application::PacketParserV2::parseInner(
+                        packet.buf->data(), packet.size,
+                        vpsm::server::domain::OUTER_HEADER_V2_SIZE)
+                    : std::nullopt;
+                if (!outer || !inner) return std::nullopt;
+                return AuthResultV2{
+                    .outer = *outer,
+                    .inner = *inner,
+                    .authenticatedPeerId = std::nullopt,
+                    .plaintextInnerAndPayload = std::make_shared<std::vector<std::uint8_t>>(
+                        packet.buf->begin() + static_cast<std::ptrdiff_t>(vpsm::server::domain::OUTER_HEADER_V2_SIZE),
+                        packet.buf->begin() + static_cast<std::ptrdiff_t>(packet.size)),
+                };
+            }
+            if (verifyResult.has_value() && !verifyResult->plaintextInnerAndPayload) {
+                const auto& inner = verifyResult->inner;
+                auto plaintext = std::make_shared<std::vector<std::uint8_t>>();
+                plaintext->push_back(static_cast<std::uint8_t>(inner.packetType));
+                auto putU32 = [&plaintext](std::uint32_t value) {
+                    for (int i = 3; i >= 0; --i) {
+                        plaintext->push_back(static_cast<std::uint8_t>(value >> (i * 8)));
+                    }
+                };
+                putU32(inner.vNetworkId);
+                putU32(inner.srcVip);
+                putU32(inner.dstVip);
+                if (inner.packetType == vpsm::server::domain::PacketTypeV2::DATA) {
+                    std::vector<std::uint8_t> ip(20, 0);
+                    ip[0] = 0x45;
+                    ip[3] = 20;
+                    ip[8] = 64;
+                    ip[9] = 6;
+                    auto writeAddress = [&ip](std::size_t offset, std::uint32_t address) {
+                        for (int i = 0; i < 4; ++i) {
+                            ip[offset + i] = static_cast<std::uint8_t>(address >> ((3 - i) * 8));
+                        }
+                    };
+                    writeAddress(12, inner.srcVip);
+                    writeAddress(16, inner.dstVip);
+                    plaintext->insert(plaintext->end(), ip.begin(), ip.end());
+                }
+                verifyResult->plaintextInnerAndPayload = std::move(plaintext);
+            }
             return verifyResult;
+        }
+
+        std::optional<vpsm::server::domain::buffer> encryptForSession(
+            std::uint64_t sessionId,
+            const std::vector<std::uint8_t>& plaintext
+        ) override {
+            ++encryptCalls;
+            lastEncryptedSessionId = sessionId;
+            auto out = std::make_shared<std::vector<std::uint8_t>>(plaintext);
+            return out;
         }
 
         std::optional<AuthResultV2> verifyResult;
         int verifyCalls = 0;
+        int encryptCalls = 0;
+        std::uint64_t lastEncryptedSessionId = 0;
+        bool passthroughForLegacyUnitTest = false;
     };
 
     class MembershipStoreFake final : public vpsm::server::port::IMembershipStore {
     public:
         std::optional<std::uint32_t> allocateVip(std::uint32_t, std::uint64_t) override { return std::nullopt; }
         bool releaseVip(std::uint32_t, std::uint64_t) override { return false; }
+        bool removeNetwork(std::uint32_t) override { return false; }
         bool bindPeer(std::uint32_t, std::uint64_t, std::uint32_t) override { return false; }
         bool unbindPeer(std::uint32_t, std::uint64_t, std::uint32_t) override { return false; }
         bool hasPeer(std::uint32_t, std::uint64_t) const override { return false; }
@@ -123,13 +184,31 @@ namespace {
         putU32(networkId);
         putU32(srcVip);
         putU32(dstVip);
+        if (type == 0) {
+            std::vector<std::uint8_t> ipv4(20, 0);
+            ipv4[0] = 0x45;
+            ipv4[2] = 0;
+            ipv4[3] = 20;
+            ipv4[8] = 64;
+            ipv4[9] = 6;
+            auto writeAddress = [&ipv4](std::size_t offset, std::uint32_t address) {
+                for (int i = 0; i < 4; ++i) {
+                    ipv4[offset + i] = static_cast<std::uint8_t>(address >> ((3 - i) * 8));
+                }
+            };
+            writeAddress(12, srcVip);
+            writeAddress(16, dstVip);
+            data.insert(data.end(), ipv4.begin(), ipv4.end());
+        }
         return data;
     }
 
     TEST(RoutingServiceTest, route_parserVernulNullopt_Drop) {
 
         MembershipStoreFake membership;
-        RoutingService service(membership);
+        AuthServiceV2Fake auth;
+        auth.passthroughForLegacyUnitTest = true;
+        RoutingService service(membership, auth);
         PacketIn pkt{.buf = nullptr, .size = 30, .type = vpsm::server::domain::UDP, .sourceIp = 0};
 
         const auto action = service.route(pkt);
@@ -142,7 +221,9 @@ namespace {
 
         MembershipStoreFake membership;
         membership.resolvePeerByKey.emplace((10ull << 32) | 200u, 2u);
-        RoutingService service(membership);
+        AuthServiceV2Fake auth;
+        auth.passthroughForLegacyUnitTest = true;
+        RoutingService service(membership, auth);
         auto raw = makePacketV2(2, 0, 10, 100, 200, 1, 50);
         PacketIn pkt{
             .buf = std::make_shared<std::vector<std::uint8_t>>(raw),
@@ -161,7 +242,9 @@ namespace {
 
         MembershipStoreFake membership;
         membership.resolvePeerByKey.emplace((10ull << 32) | 100u, 1u);
-        RoutingService service(membership);
+        AuthServiceV2Fake auth;
+        auth.passthroughForLegacyUnitTest = true;
+        RoutingService service(membership, auth);
         auto raw = makePacketV2(2, 0, 10, 100, 200, 1, 50);
         PacketIn pkt{
             .buf = std::make_shared<std::vector<std::uint8_t>>(raw),
@@ -182,8 +265,12 @@ namespace {
         PeerEndpointRegistryFake endpoints;
         membership.resolvePeerByKey.emplace((10ull << 32) | 100u, 1u);
         membership.resolvePeerByKey.emplace((10ull << 32) | 200u, 2u);
-        endpoints.byPeerId.emplace(2u, vpsm::server::domain::PeerEndpoint{.ip = 0x0A0000C8u, .port = 4000u});
-        RoutingService service(membership, nullptr, &endpoints);
+        endpoints.byPeerId.emplace(2u, vpsm::server::domain::PeerEndpoint{
+            .ip = 0x0A0000C8u, .port = 4000u, .sessionId = 900u
+        });
+        AuthServiceV2Fake auth;
+        auth.passthroughForLegacyUnitTest = true;
+        RoutingService service(membership, auth, &endpoints);
         auto raw = makePacketV2(2, 0, 10, 100, 200, 777, 50);
         PacketIn pkt{
             .buf = std::make_shared<std::vector<std::uint8_t>>(raw),
@@ -197,8 +284,7 @@ namespace {
 
         ASSERT_TRUE(std::holds_alternative<Forward>(action));
         const auto& forward = std::get<Forward>(action);
-        EXPECT_EQ(forward.packet.buf, pkt.buf);
-        EXPECT_EQ(forward.packet.size, pkt.size);
+        EXPECT_TRUE(forward.packet.buf);
         EXPECT_EQ(forward.packet.type, pkt.type);
         EXPECT_EQ(forward.packet.destIp, 0x0A0000C8u);
         EXPECT_EQ(forward.packet.destPort, 4000u);
@@ -211,7 +297,7 @@ namespace {
         membership.resolvePeerByKey.emplace((10ull << 32) | 200u, 2u);
         AuthServiceV2Fake auth;
         auth.verifyResult = std::nullopt;
-        RoutingService service(membership, &auth);
+        RoutingService service(membership, auth);
 
         auto raw = makePacketV2(2, 0, 10, 100, 200, 10, 50);
         PacketIn pkt{
@@ -235,14 +321,16 @@ namespace {
         membership.resolvePeerByKey.emplace((10ull << 32) | 100u, 1u);
         membership.resolvePeerByKey.emplace((10ull << 32) | 200u, 2u);
         membership.resolveVipByKey.emplace((10ull << 32) | 1u, 100u);
-        endpoints.byPeerId.emplace(2u, vpsm::server::domain::PeerEndpoint{.ip = 0x0A0000C8u, .port = 4000u});
+        endpoints.byPeerId.emplace(2u, vpsm::server::domain::PeerEndpoint{
+            .ip = 0x0A0000C8u, .port = 4000u, .sessionId = 901u
+        });
         AuthServiceV2Fake auth;
         auth.verifyResult = AuthResultV2{
             .outer = OutPacketHeaderV2{.packetVersion = 2, .sessionId = 50, .seq = 11},
             .inner = InnerPacketHeaderV2{.packetType = vpsm::server::domain::PacketTypeV2::DATA, .vNetworkId = 10, .srcVip = 100, .dstVip = 200},
             .authenticatedPeerId = 1u,
         };
-        RoutingService service(membership, &auth, &endpoints);
+        RoutingService service(membership, auth, &endpoints);
 
         auto raw = makePacketV2(2, 0, 10, 100, 200, 11, 50);
         PacketIn pkt{
@@ -259,6 +347,8 @@ namespace {
         const auto& forward = std::get<Forward>(action);
         EXPECT_EQ(forward.packet.destIp, 0x0A0000C8u);
         EXPECT_EQ(forward.packet.destPort, 4000u);
+        EXPECT_EQ(auth.encryptCalls, 1);
+        EXPECT_EQ(auth.lastEncryptedSessionId, 901u);
     }
 
     TEST(RoutingServiceTest, route_authPassedButSrcVipMismatchWithSessionBoundPeer_Drop) {
@@ -272,7 +362,7 @@ namespace {
             .inner = InnerPacketHeaderV2{.packetType = vpsm::server::domain::PacketTypeV2::DATA, .vNetworkId = 10, .srcVip = 100, .dstVip = 200},
             .authenticatedPeerId = 1u,
         };
-        RoutingService service(membership, &auth);
+        RoutingService service(membership, auth);
 
         auto raw = makePacketV2(2, 0, 10, 100, 200, 12, 50);
         PacketIn pkt{
@@ -296,7 +386,9 @@ namespace {
         membership.resolvePeerByKey.emplace((10ull << 32) | 100u, 1u);
         membership.resolvePeerByKey.emplace((10ull << 32) | 200u, 2u);
         membership.resolveVipByKey.emplace((10ull << 32) | 1u, 100u);
-        endpoints.byPeerId.emplace(2u, vpsm::server::domain::PeerEndpoint{.ip = 0x0A0000C8u, .port = 4000u});
+        endpoints.byPeerId.emplace(2u, vpsm::server::domain::PeerEndpoint{
+            .ip = 0x0A0000C8u, .port = 4000u, .sessionId = 902u
+        });
 
         AuthServiceV2Fake auth;
         auth.verifyResult = AuthResultV2{
@@ -305,7 +397,7 @@ namespace {
             .authenticatedPeerId = 1u,
         };
 
-        RoutingService service(membership, &auth, &endpoints);
+        RoutingService service(membership, auth, &endpoints);
 
         auto raw = makePacketV2(2, 0, 10, 100, 200, 42, 70);
         PacketIn pkt{
@@ -323,6 +415,8 @@ namespace {
         ASSERT_TRUE(srcEndpoint.has_value());
         EXPECT_EQ(srcEndpoint->ip, 0xC0A8010Au);
         EXPECT_EQ(srcEndpoint->port, 51820u);
+        EXPECT_EQ(srcEndpoint->sessionId, 70u);
+        EXPECT_EQ(auth.lastEncryptedSessionId, 902u);
     }
 
     TEST(RoutingServiceTest, route_dstPeerWithoutEndpoint_Drop) {
@@ -340,7 +434,7 @@ namespace {
             .authenticatedPeerId = 1u,
         };
 
-        RoutingService service(membership, &auth, &endpoints);
+        RoutingService service(membership, auth, &endpoints);
 
         auto raw = makePacketV2(2, 0, 10, 100, 200, 43, 71);
         PacketIn pkt{
@@ -364,7 +458,9 @@ namespace {
         membership.resolvePeerByKey.emplace((10ull << 32) | 100u, 1u);
         membership.resolvePeerByKey.emplace((10ull << 32) | 200u, 2u);
 
-        RoutingService service(membership, nullptr, &endpoints);
+        AuthServiceV2Fake auth;
+        auth.passthroughForLegacyUnitTest = true;
+        RoutingService service(membership, auth, &endpoints);
 
         auto raw = makePacketV2(2, 0, 10, 100, 200, 100, 50);
         PacketIn pkt{
@@ -393,7 +489,9 @@ namespace {
         membership.resolvePeerByKey.emplace((10ull << 32) | 100u, 1u);
         membership.resolvePeerByKey.emplace((10ull << 32) | 200u, 2u);
 
-        RoutingService service(membership, nullptr, &endpoints);
+        AuthServiceV2Fake auth;
+        auth.passthroughForLegacyUnitTest = true;
+        RoutingService service(membership, auth, &endpoints);
 
         auto firstRaw = makePacketV2(2, 0, 10, 100, 200, 101, 50);
         PacketIn first{
@@ -434,7 +532,9 @@ namespace {
         // peer1 endpoint is known, peer2 endpoint will be learned from incoming packet.
         endpoints.byPeerId.emplace(1u, vpsm::server::domain::PeerEndpoint{.ip = 0x0A000001u, .port = 50001u});
 
-        RoutingService service(membership, nullptr, &endpoints);
+        AuthServiceV2Fake auth;
+        auth.passthroughForLegacyUnitTest = true;
+        RoutingService service(membership, auth, &endpoints);
 
         auto bootstrapRaw = makePacketV2(2, 0, 10, 200, 100, 1, 50);
         PacketIn bootstrap{
@@ -473,7 +573,9 @@ namespace {
 
         endpoints.byPeerId.emplace(1u, vpsm::server::domain::PeerEndpoint{.ip = 0x0A000001u, .port = 50001u});
 
-        RoutingService service(membership, nullptr, &endpoints);
+        AuthServiceV2Fake auth;
+        auth.passthroughForLegacyUnitTest = true;
+        RoutingService service(membership, auth, &endpoints);
 
         auto firstBootstrapRaw = makePacketV2(2, 0, 10, 200, 100, 10, 50);
         PacketIn firstBootstrap{

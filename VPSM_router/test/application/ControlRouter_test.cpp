@@ -156,4 +156,38 @@ namespace {
 
         EXPECT_EQ(response.status, 200);
     }
+
+    TEST(ControlRouterTest, route_ProtectedPathWithoutCredentials_Returns401True) {
+        ControlRouter router;
+        router.addRoute("GET", "/user/{peerId}", std::make_shared<EchoPathParamEndpoint>());
+
+        const auto response = router.route(ControlRequest{
+            .method = "GET",
+            .path = "/user/7",
+        });
+
+        EXPECT_EQ(response.status, 401);
+    }
+
+    TEST(ControlRouterTest, route_ProtectedPath_AuthenticatorCalledOnceAndIdentityForwarded) {
+        class IdentityEndpoint final : public IControlEndpoint {
+        public:
+            ControlResponse handle(const ControlRequest& request) override {
+                return ControlResponse{.status = request.authenticatedPeerId == 7 ? 200 : 403};
+            }
+        };
+
+        ControlRouter router;
+        int calls = 0;
+        router.setAuthenticator([&calls](const ControlRequest&) -> std::optional<std::uint64_t> {
+            ++calls;
+            return 7;
+        });
+        router.addRoute("GET", "/user/{peerId}", std::make_shared<IdentityEndpoint>());
+
+        const auto response = router.route(ControlRequest{.method = "GET", .path = "/user/7"});
+
+        EXPECT_EQ(response.status, 200);
+        EXPECT_EQ(calls, 1);
+    }
 }

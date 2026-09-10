@@ -7,7 +7,7 @@ namespace vpsm::server::application::endpoints {
         }
 
         if (!request.authenticatedPeerId.has_value()) {
-            return responseEncoder_.encode(dto::NetworkPeersListResultDto{.ok = false, .status = 402, .error = "auth_required"});
+            return responseEncoder_.encode(dto::NetworkPeersListResultDto{.ok = false, .status = 401, .error = "auth_required"});
         }
 
         const auto it = request.pathParams.find("id");
@@ -29,6 +29,7 @@ namespace vpsm::server::application::endpoints {
             result.peers.push_back(dto::NetworkPeerItemDto{
                 .peerId = peer.peerId,
                 .vip = peer.vip,
+                .nickname = peer.nickname,
             });
         }
 

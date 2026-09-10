@@ -29,12 +29,39 @@ namespace {
         EXPECT_EQ(*first, *second);
     }
 
+    TEST(MembershipRegistryTest, peerKeepsOneServerWideVipAcrossNetworks) {
+        MembershipRegistry store;
+        const auto inFirstNetwork = store.allocateVip(10, 1001);
+        const auto inSecondNetwork = store.allocateVip(20, 1001);
+        const auto anotherPeer = store.allocateVip(20, 1002);
+
+        ASSERT_TRUE(inFirstNetwork.has_value());
+        ASSERT_TRUE(inSecondNetwork.has_value());
+        ASSERT_TRUE(anotherPeer.has_value());
+        EXPECT_EQ(inFirstNetwork, inSecondNetwork);
+        EXPECT_NE(inFirstNetwork, anotherPeer);
+        EXPECT_EQ(store.resolvePeer(10, *inFirstNetwork), 1001u);
+        EXPECT_EQ(store.resolvePeer(20, *inFirstNetwork), 1001u);
+    }
+
+    TEST(MembershipRegistryTest, vipIsReleasedOnlyAfterLastMembershipIsRemoved) {
+        MembershipRegistry store;
+        const auto vip = store.allocateVip(10, 1001);
+        ASSERT_EQ(store.allocateVip(20, 1001), vip);
+        ASSERT_TRUE(store.releaseVip(10, 1001));
+        EXPECT_EQ(store.resolveVip(20, 1001), vip);
+        EXPECT_NE(store.allocateVip(10, 1002), vip);
+        ASSERT_TRUE(store.releaseVip(20, 1001));
+        EXPECT_EQ(store.allocateVip(30, 1003), vip);
+    }
+
     TEST(MembershipRegistryTest, bindPeer_vipUzheZanyatDrugimPeer_False) {
 
         MembershipRegistry store;
-        ASSERT_TRUE(store.bindPeer(7, 1, 77));
+        constexpr std::uint32_t vip = 0x0AF0074Du; // 10.240.7.77
+        ASSERT_TRUE(store.bindPeer(7, 1, vip));
 
-        const bool ok = store.bindPeer(7, 2, 77);
+        const bool ok = store.bindPeer(7, 2, vip);
 
         EXPECT_FALSE(ok);
     }
@@ -42,9 +69,10 @@ namespace {
     TEST(MembershipRegistryTest, unbindPeer_neverniyVip_False) {
 
         MembershipRegistry store;
-        ASSERT_TRUE(store.bindPeer(7, 1, 77));
+        constexpr std::uint32_t vip = 0x0AF0074Du; // 10.240.7.77
+        ASSERT_TRUE(store.bindPeer(7, 1, vip));
 
-        const bool ok = store.unbindPeer(7, 1, 78);
+        const bool ok = store.unbindPeer(7, 1, vip + 1);
 
         EXPECT_FALSE(ok);
     }

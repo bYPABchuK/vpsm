@@ -41,12 +41,18 @@ namespace vpsm::server::application {
             const std::string& passwordHash
         ) override;
 
+        port::JoinNetworkResult joinNetworkByName(
+            std::uint64_t peerId,
+            const std::string& networkName,
+            const std::string& passwordHash
+        ) override;
+
         port::ActionResult leaveNetwork(
             std::uint64_t peerId,
             std::uint64_t networkId
         ) override;
 
-        std::vector<domain::VNetwork> listUserNetworks(std::uint64_t peerId) const override;
+        std::vector<domain::NetworkMembership> listUserNetworks(std::uint64_t peerId) const override;
         std::vector<domain::Peer> listNetworkPeers(std::uint64_t networkId) const override;
 
     private:

@@ -32,19 +32,20 @@ namespace vpsm::server::application {
     }
 
     ControlResponse ControlRouter::route(const ControlRequest& request) {
+        std::optional<std::uint64_t> authenticatedPeerId;
         if (requiresAuth(request.path)) {
             if (!authenticator_) {
                 return ControlResponse{
-                    .status = 402,
+                    .status = 401,
                     .contentType = "text/plain",
                     .body = std::vector<std::uint8_t>{'a','u','t','h','_','r','e','q','u','i','r','e','d'},
                 };
             }
 
-            const auto authenticatedPeerId = authenticator_(request);
+            authenticatedPeerId = authenticator_(request);
             if (!authenticatedPeerId.has_value()) {
                 return ControlResponse{
-                    .status = 402,
+                    .status = 401,
                     .contentType = "text/plain",
                     .body = std::vector<std::uint8_t>{'a','u','t','h','_','r','e','q','u','i','r','e','d'},
                 };
@@ -55,9 +56,7 @@ namespace vpsm::server::application {
         const auto* node = &root_;
         ControlRequest routedRequest = request;
         routedRequest.pathParams.clear();
-        if (requiresAuth(request.path) && authenticator_) {
-            routedRequest.authenticatedPeerId = authenticator_(request);
-        }
+        routedRequest.authenticatedPeerId = authenticatedPeerId;
 
         for (const auto& segment : segments) {
             const auto staticIt = node->staticChildren.find(segment);

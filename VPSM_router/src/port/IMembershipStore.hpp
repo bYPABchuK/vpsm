@@ -19,6 +19,7 @@ namespace vpsm::server::port {
             std::uint32_t networkId,
             std::uint64_t peerId
         ) = 0;
+        virtual bool removeNetwork(std::uint32_t networkId) = 0;
         
         virtual bool bindPeer(std::uint32_t networkId, std::uint64_t peerId, std::uint32_t vip) = 0;
         virtual bool unbindPeer(std::uint32_t networkId, std::uint64_t peerId, std::uint32_t vip) = 0;

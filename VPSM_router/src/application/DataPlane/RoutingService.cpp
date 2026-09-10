@@ -23,7 +23,7 @@ namespace vpsm::server::application {
 
         class AuthRoutingStage final : public port::IRoutingStage {
         public:
-            explicit AuthRoutingStage(port::IAuthServiceV2* authService)
+            explicit AuthRoutingStage(port::IAuthServiceV2& authService)
                 : authService_(authService) {}
 
             void execute(domain::RoutingContext& ctx) override {
@@ -33,23 +33,7 @@ namespace vpsm::server::application {
                     return;
                 }
 
-                if (authService_ == nullptr) {
-                    const auto inner = PacketParserV2::parseInner(
-                        ctx.packet.buf->data(),
-                        ctx.packet.size,
-                        domain::OUTER_HEADER_V2_SIZE
-                    );
-                    if (!inner.has_value()) {
-                        ctx.action = domain::Drop{.reason = domain::DropReason::PARSE};
-                        ctx.stop = true;
-                        return;
-                    }
-
-                    ctx.innerHeaderV2 = inner;
-                    return;
-                }
-
-                const auto authResult = authService_->verifyAndDecrypt(ctx.packet);
+                const auto authResult = authService_.verifyAndDecrypt(ctx.packet);
                 if (!authResult.has_value()) {
                     ctx.action = domain::Drop{.reason = domain::DropReason::AUTH};
                     ctx.stop = true;
@@ -59,10 +43,11 @@ namespace vpsm::server::application {
                 ctx.outerHeaderV2 = authResult->outer;
                 ctx.innerHeaderV2 = authResult->inner;
                 ctx.srcPeerId = authResult->authenticatedPeerId;
+                ctx.plaintextInnerAndPayload = authResult->plaintextInnerAndPayload;
             }
 
         private:
-            port::IAuthServiceV2* authService_;
+            port::IAuthServiceV2& authService_;
         };
 
         class MembershipRoutingStage final : public port::IRoutingStage {
@@ -98,6 +83,63 @@ namespace vpsm::server::application {
 
         private:
             port::IMembershipStore& memStore_;
+        };
+
+        class InnerIpv4ValidationStage final : public port::IRoutingStage {
+        public:
+            void execute(domain::RoutingContext& ctx) override {
+                if (!ctx.innerHeaderV2.has_value() || !ctx.plaintextInnerAndPayload ||
+                    ctx.plaintextInnerAndPayload->size() < domain::INNER_HEADER_V2_SIZE) {
+                    drop(ctx, domain::DropReason::PARSE);
+                    return;
+                }
+
+                const auto payloadSize =
+                    ctx.plaintextInnerAndPayload->size() - domain::INNER_HEADER_V2_SIZE;
+                if (ctx.innerHeaderV2->packetType != domain::PacketTypeV2::DATA) {
+                    if (payloadSize != 0) drop(ctx, domain::DropReason::PARSE);
+                    return;
+                }
+
+                if (payloadSize < 20) {
+                    drop(ctx, domain::DropReason::PARSE);
+                    return;
+                }
+                const auto* ip = ctx.plaintextInnerAndPayload->data() + domain::INNER_HEADER_V2_SIZE;
+                if ((ip[0] >> 4) != 4) {
+                    drop(ctx, domain::DropReason::PARSE);
+                    return;
+                }
+                const auto headerLength = static_cast<std::size_t>(ip[0] & 0x0fu) * 4u;
+                const auto totalLength = static_cast<std::size_t>(
+                    (static_cast<std::uint16_t>(ip[2]) << 8) | ip[3]
+                );
+                if (headerLength < 20 || headerLength > payloadSize ||
+                    totalLength < headerLength || totalLength != payloadSize) {
+                    drop(ctx, domain::DropReason::PARSE);
+                    return;
+                }
+
+                const auto source = readU32(ip + 12);
+                const auto destination = readU32(ip + 16);
+                if (source != ctx.innerHeaderV2->srcVip ||
+                    destination != ctx.innerHeaderV2->dstVip) {
+                    drop(ctx, domain::DropReason::MEMBERSHIP);
+                }
+            }
+
+        private:
+            static std::uint32_t readU32(const std::uint8_t* value) {
+                return (static_cast<std::uint32_t>(value[0]) << 24) |
+                       (static_cast<std::uint32_t>(value[1]) << 16) |
+                       (static_cast<std::uint32_t>(value[2]) << 8) |
+                       static_cast<std::uint32_t>(value[3]);
+            }
+
+            static void drop(domain::RoutingContext& ctx, domain::DropReason reason) {
+                ctx.action = domain::Drop{.reason = reason};
+                ctx.stop = true;
+            }
         };
 
         class EndpointRoutingStage final : public port::IRoutingStage {
@@ -147,6 +189,7 @@ namespace vpsm::server::application {
                     domain::PeerEndpoint{
                         .ip = ctx.packet.sourceIp,
                         .port = ctx.packet.sourcePort,
+                        .sessionId = ctx.outerHeaderV2.has_value() ? ctx.outerHeaderV2->sessionId : 0,
                     },
                     std::chrono::steady_clock::now()
                 );
@@ -158,6 +201,9 @@ namespace vpsm::server::application {
 
         class ForwardRoutingStage final : public port::IRoutingStage {
         public:
+            explicit ForwardRoutingStage(port::IAuthServiceV2& authService)
+                : authService_(authService) {}
+
             void execute(domain::RoutingContext& ctx) override {
                 if (!ctx.innerHeaderV2.has_value()) {
                     ctx.action = domain::Drop{.reason = domain::DropReason::PARSE};
@@ -171,9 +217,28 @@ namespace vpsm::server::application {
                     return;
                 }
 
+                domain::buffer outputBuffer = ctx.packet.buf;
+                std::size_t outputSize = ctx.packet.size;
+                if (!ctx.plaintextInnerAndPayload) {
+                    ctx.action = domain::Drop{.reason = domain::DropReason::AUTH};
+                    ctx.stop = true;
+                    return;
+                }
+                const auto encrypted = authService_.encryptForSession(
+                    ctx.dstEndpoint->sessionId,
+                    *ctx.plaintextInnerAndPayload
+                );
+                if (!encrypted.has_value()) {
+                    ctx.action = domain::Drop{.reason = domain::DropReason::AUTH};
+                    ctx.stop = true;
+                    return;
+                }
+                outputBuffer = *encrypted;
+                outputSize = outputBuffer->size();
+
                 domain::PacketOut packetOut{
-                    .buf = ctx.packet.buf,
-                    .size = ctx.packet.size,
+                    .buf = std::move(outputBuffer),
+                    .size = outputSize,
                     .type = ctx.packet.type,
                     .destIp = ctx.dstEndpoint->ip,
                     .destPort = ctx.dstEndpoint->port,
@@ -182,6 +247,9 @@ namespace vpsm::server::application {
                 ctx.action = domain::Forward{packetOut};
                 ctx.stop = true;
             }
+
+        private:
+            port::IAuthServiceV2& authService_;
         };
 
         class DefaultRoutingPipeline final : public port::IRoutingPipeline {
@@ -205,7 +273,7 @@ namespace vpsm::server::application {
 
     RoutingService::RoutingService(
         port::IMembershipStore& memStore,
-        port::IAuthServiceV2* authService,
+        port::IAuthServiceV2& authService,
         port::IPeerEndpointRegistry* endpointRegistry
     )
         : memStore_(memStore),
@@ -215,9 +283,10 @@ namespace vpsm::server::application {
         stages.emplace_back(std::make_unique<stage::ParseRoutingStage>());
         stages.emplace_back(std::make_unique<stage::AuthRoutingStage>(authService_));
         stages.emplace_back(std::make_unique<stage::MembershipRoutingStage>(memStore_));
+        stages.emplace_back(std::make_unique<stage::InnerIpv4ValidationStage>());
         stages.emplace_back(std::make_unique<stage::SourceEndpointUpdateStage>(endpointRegistry_));
         stages.emplace_back(std::make_unique<stage::EndpointRoutingStage>(endpointRegistry_));
-        stages.emplace_back(std::make_unique<stage::ForwardRoutingStage>());
+        stages.emplace_back(std::make_unique<stage::ForwardRoutingStage>(authService_));
 
         pipeline_ = std::make_unique<stage::DefaultRoutingPipeline>(std::move(stages));
     }

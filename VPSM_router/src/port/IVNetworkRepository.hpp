@@ -18,6 +18,7 @@ namespace vpsm::server::port {
         virtual bool deleteNetwork(std::uint64_t networkId) = 0;
 
         virtual std::optional<domain::VNetwork> getNetwork(std::uint64_t networkId) const = 0;
+        virtual std::optional<domain::VNetwork> getNetworkByName(const std::string& name) const = 0;
         virtual std::vector<domain::VNetwork> listNetworks() const = 0;
 
         virtual bool exists(std::uint64_t networkId) const = 0;

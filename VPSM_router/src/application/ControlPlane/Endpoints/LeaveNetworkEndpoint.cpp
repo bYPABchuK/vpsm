@@ -2,6 +2,8 @@
 #include "AuthPolicy.hpp"
 #include "UserServiceErrorMapper.hpp"
 
+#include <algorithm>
+
 namespace vpsm::server::application::endpoints {
     ControlResponse LeaveNetworkEndpoint::handle(const ControlRequest& request) {
         if (request.method != expectedMethod_) {
@@ -13,8 +15,22 @@ namespace vpsm::server::application::endpoints {
             return responseEncoder_.encode(dto::LeaveNetworkResultDto{.ok = false, .status = 400, .error = "invalid_payload"});
         }
 
-        if (!auth_policy::matchesAuthenticatedPeer(request, dto->peerId)) {
+        if (!request.authenticatedPeerId.has_value()) {
+            return responseEncoder_.encode(dto::LeaveNetworkResultDto{.ok = false, .status = 401, .error = "auth_required"});
+        }
+
+        const auto requesterId = *request.authenticatedPeerId;
+        const auto memberships = userService_.listUserNetworks(requesterId);
+        const auto requesterOwnsNetwork = std::any_of(
+            memberships.cbegin(), memberships.cend(), [dto, requesterId](const auto& membership) {
+                return membership.network.id == dto->networkId
+                    && membership.network.owner.peerId == requesterId;
+            });
+        if (requesterId != dto->peerId && !requesterOwnsNetwork) {
             return responseEncoder_.encode(dto::LeaveNetworkResultDto{.ok = false, .status = 403, .error = "forbidden"});
+        }
+        if (requesterId == dto->peerId && requesterOwnsNetwork) {
+            return responseEncoder_.encode(dto::LeaveNetworkResultDto{.ok = false, .status = 403, .error = "owner_must_delete_network"});
         }
 
         const auto ok = userService_.leaveNetwork(dto->peerId, dto->networkId);

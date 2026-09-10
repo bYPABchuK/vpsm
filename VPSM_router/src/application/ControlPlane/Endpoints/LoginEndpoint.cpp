@@ -42,6 +42,7 @@ namespace vpsm::server::application::endpoints {
             .peerId = *peerId,
             .sessionId = session.sessionId,
             .sessionKey = session.sessionKey,
+            .dataPlaneKey = SessionStore::keyToHex(session.dataPlaneKey),
         });
     }
 }

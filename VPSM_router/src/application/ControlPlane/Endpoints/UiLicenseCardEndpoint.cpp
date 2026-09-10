@@ -1,4 +1,4 @@
-#include "UiLicensescreenEndpoint.hpp"
+#include "UiLicenseCardEndpoint.hpp"
 
 #include "../JsonSupport.hpp"
 

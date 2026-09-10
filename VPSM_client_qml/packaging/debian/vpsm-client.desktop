@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=VPSM Client
+Comment=Connect to a VPSM overlay network
+Exec=vpsm_client
+Icon=network-vpn
+Terminal=true
+Categories=Network;
+Keywords=VPN;TUN;Overlay;Network;

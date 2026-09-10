@@ -61,6 +61,12 @@ namespace vpsm::server::application {
             return port::UserServiceError::CreateFailed;
         }
 
+        // The owner is a member from the moment the network is created.
+        if (!membershipStore_.allocateVip(static_cast<std::uint32_t>(*networkId), ownerPeerId).has_value()) {
+            networkRepository_.deleteNetwork(*networkId);
+            return port::UserServiceError::CreateFailed;
+        }
+
         return port::CreateNetworkSuccess{.networkId = *networkId};
     }
 
@@ -80,6 +86,8 @@ namespace vpsm::server::application {
         if (!networkRepository_.deleteNetwork(networkId)) {
             return port::UserServiceError::DeleteFailed;
         }
+
+        membershipStore_.removeNetwork(static_cast<std::uint32_t>(networkId));
 
         return port::ActionSuccess{};
     }
@@ -107,7 +115,14 @@ namespace vpsm::server::application {
             if (!vip.has_value()) {
                 return port::UserServiceError::InternalError;
             }
-            return port::JoinNetworkSuccess{.vip = *vip, .alreadyExists = true};
+            return port::JoinNetworkSuccess{
+                .vip = *vip,
+                .networkAddress = network->networkAddress,
+                .prefixLength = network->prefixLength,
+                .mtu = network->mtu,
+                .alreadyExists = true,
+                .networkId = networkId,
+            };
         }
 
         const auto vip = membershipStore_.allocateVip(networkId, peerId);
@@ -115,7 +130,24 @@ namespace vpsm::server::application {
             return port::UserServiceError::CreateFailed;
         }
 
-        return port::JoinNetworkSuccess{.vip = *vip, .alreadyExists = false};
+        return port::JoinNetworkSuccess{
+            .vip = *vip,
+            .networkAddress = network->networkAddress,
+            .prefixLength = network->prefixLength,
+            .mtu = network->mtu,
+            .alreadyExists = false,
+            .networkId = networkId,
+        };
+    }
+
+    port::JoinNetworkResult UserService::joinNetworkByName(
+        std::uint64_t peerId,
+        const std::string& networkName,
+        const std::string& passwordHash
+    ) {
+        const auto network = networkRepository_.getNetworkByName(networkName);
+        if (!network.has_value()) return port::UserServiceError::NetworkNotFound;
+        return joinNetwork(peerId, network->id, passwordHash);
     }
 
     port::ActionResult UserService::leaveNetwork(
@@ -141,13 +173,12 @@ namespace vpsm::server::application {
         return port::ActionSuccess{};
     }
 
-    std::vector<domain::VNetwork> UserService::listUserNetworks(std::uint64_t peerId) const {
-        std::vector<domain::VNetwork> result;
+    std::vector<domain::NetworkMembership> UserService::listUserNetworks(std::uint64_t peerId) const {
+        std::vector<domain::NetworkMembership> result;
         const auto networks = networkRepository_.listNetworks();
         for (const auto& network : networks) {
-            if (membershipStore_.hasPeer(static_cast<std::uint32_t>(network.id), peerId)) {
-                result.push_back(network);
-            }
+            const auto vip = membershipStore_.resolveVip(static_cast<std::uint32_t>(network.id), peerId);
+            if (vip.has_value()) result.push_back(domain::NetworkMembership{network, *vip});
         }
 
         return result;
@@ -158,6 +189,11 @@ namespace vpsm::server::application {
             return {};
         }
 
-        return membershipStore_.listPeers(static_cast<std::uint32_t>(networkId));
+        auto peers = membershipStore_.listPeers(static_cast<std::uint32_t>(networkId));
+        for (auto& peer : peers) {
+            peer.nickname = peerRepository_.getNickname(peer.peerId).value_or(
+                "peer-" + std::to_string(peer.peerId));
+        }
+        return peers;
     }
 }
